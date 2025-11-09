@@ -443,7 +443,14 @@ def generate_script_only(config_path: str = CONFIG_PATH_DEFAULT,
             "story_outline": story_cfg.get('narrative_structure', []),
             "engagement_techniques": story_cfg.get('engagement_prompts'),
             "creativity": story_cfg.get('creativity', 0.65),
-            "user_instructions": instructions
+            "user_instructions": instructions,
+            # 將 Podcastfy 轉錄輸出指到共享 transcripts 目錄，避免落在專案內部 ./data
+            "text_to_speech": {
+                "output_directories": {
+                    "transcripts": str(TRANSCRIPT_DIR),
+                    "audio": str(book_output_dir / "audio")
+                }
+            }
         }
 
         print(f"🚀 生成章節 {chapter['number']}: {chapter['title']}")
