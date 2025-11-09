@@ -198,7 +198,7 @@ podcast-workspace/                 # Monorepo 根目錄
 │   ├── generate_script.py         # 腳本生成器
 │   ├── generate_audio.py          # 音頻生成器
 │   ├── generate_subtitles.py      # 字幕生成器
-│   ├── cli/                       # CLI 實現（重命名自 storytelling_cli）
+│   ├── cli/                       # CLI 實現
 │   ├── alignment/                 # MFA 對齊工具
 │   ├── scripts/                   # 輔助腳本
 │   ├── requirements/              # CLI 依賴
@@ -207,7 +207,7 @@ podcast-workspace/                 # Monorepo 根目錄
 │   │   └── core.txt              # 核心依賴
 │   └── README.md                  # CLI 文檔
 │
-├── backend/                       # FastAPI REST API 服務（重命名自 storytelling-backend）
+├── backend/                       # FastAPI REST API 服務
 │   ├── server/app/main.py         # FastAPI 應用
 │   ├── requirements/              # API 依賴
 │   │   └── server.txt            # 精簡的 API 依賴（不含 CLI 套件）
@@ -215,13 +215,13 @@ podcast-workspace/                 # Monorepo 根目錄
 │   ├── Dockerfile                 # API 部署映像（精簡版）
 │   └── docs/                      # 後端文檔
 │
-├── data/                          # 🆕 共享資料目錄（重命名自 storytelling-data）
+├── data/                          # 🆕 共享資料目錄
 │   ├── Foundation/                # 書籍章節源文件
 │   ├── Project Hail Mary/
 │   ├── Mistborn.../
 │   └── transcripts/               # 轉錄文本
 │
-├── output/                        # 🆕 共享輸出目錄（重命名自 storytelling-output）
+├── output/                        # 🆕 共享輸出目錄
 │   ├── Foundation/                # 生成的播客內容
 │   │   └── chapter0/
 │   │       ├── podcast_script.txt
@@ -361,15 +361,6 @@ git log --oneline --graph --all
 3. 提交變更：`git commit -m 'feat: add amazing feature'`
 4. 推送分支：`git push origin feature/amazing-feature`
 5. 開啟 Pull Request
-
----
-
-## 📝 Git Remote 備份
-
-原始倉庫 URL 已備份至：
-- `git-remote-backend.txt` - storytelling-backend 倉庫
-- `git-remote-ios.txt` - audio-earning-ios 倉庫
-- `git-remote-podcast.txt` - gemini-2-podcast 倉庫
 
 ---
 

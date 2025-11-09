@@ -1,1 +1,0 @@
-"""Storytelling CLI package."""

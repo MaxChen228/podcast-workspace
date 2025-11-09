@@ -1,221 +1,35 @@
-# Storytelling Podcast Backend
+# Storytelling Podcast API
 
-> 將英文書籍章節轉換為教學風格的單人旁白播客系統
+> FastAPI 服務，提供播客內容的 RESTful API
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 核心特性
 
-- 📝 **智能腳本生成** - 使用 Gemini 2.5 Pro 將書籍章節轉換為教學風格播客腳本
-- 🎙️ **高質量 TTS** - Gemini Multi-Speaker TTS 生成自然流暢的單人旁白音頻
-- 📊 **詞級精準字幕** - Montreal Forced Aligner 實現毫秒級字幕對齊
-- 🚀 **FastAPI 服務** - RESTful API 供前端應用消費
-- ⚙️ **靈活配置** - 支持多語言等級（A2-C1）、長度模式、語速調整
+- 🚀 **FastAPI 服務** - 高效能的 RESTful API
+- 📚 **內容管理** - 管理書籍、章節、音訊和字幕
+- ☁️ **多種交付模式** - 支援本地檔案、GCS 直傳、簽名 URL
+- 🔍 **新聞整合** - 透過 NewsData.io 提供分類新聞
+- 📝 **句子解釋** - Gemini API 提供即時句子說明
+- ⚙️ **靈活配置** - 支援環境變數覆寫所有設定
 
 ## 快速開始
 
-### 10 分鐘上手
+### 本地開發
 
 ```bash
-# 1. 克隆倉庫
-git clone <your-repo-url>
-cd storytelling-backend
-
-# 2. 創建虛擬環境並安裝依賴
+# 1. 安裝依賴
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements/base.txt
+pip install -r requirements/server.txt
 
-# 3. 配置 API 金鑰
-echo "GEMINI_API_KEY=your_api_key_here" > .env
+# 2. 配置環境變數
+cp .env.example .env
+# 編輯 .env，設定必要的 API 金鑰
 
-# 4. 準備書籍章節（示例已提供）
-ls data/foundation/chapter*.txt
-
-# 5. 啟動交互式 CLI
-./run.sh
-```
-
-### 工作流程
-
-```mermaid
-graph LR
-    A[原始文本] --> B[生成腳本]
-    B --> C[生成音頻]
-    C --> D[生成字幕]
-    D --> E[API 服務]
-    E --> F[前端播放]
-```
-
-**三步驟生成播客：**
-1. **腳本** - `./run.sh` → 選項 1）生成腳本
-2. **音頻** - `./run.sh` → 選項 2）生成音頻（字幕需另行執行選項 3）
-3. **服務** - `uvicorn server.app.main:app --reload`
-
-### 🔄 Gemini Dialogue Demo（快速整合）
-想用 `gemini-2-podcast` 快速產生雙人對話播客進行展示，可依序：
-
-1. 在 `../gemini-2-podcast/` 依 README 生成 `podcast_script.txt` 與 `final_podcast.wav`（可加 `--language`）。
-2. 回到本專案，可選：
-   - 直接在 `./run.sh` 選單中選「匯入 Gemini 對話 Demo」，依提示填入 book / chapter / language（匯入時會自動移除 `Speaker A/B:` 前綴並輸出 MP3）。
-   - 或執行指令：
-   ```bash
-   python scripts/import_gemini_dialogue.py \
-      --book gemini-demo \
-      --chapter chapter_dialogue_demo \
-      --title "Gemini Dialogue" \
-      --language es
-    ```
-   會將音訊與腳本複製到 `output/<book>/<chapter>/` 並建立 metadata。
-3. 啟動 `uvicorn` 後，前端可透過既有 `/books/{book}/chapters/{chapter}` API 播放該章節；若需要字幕，再把匯入後的腳本 + 音訊丟進原本的字幕對齊流程即可。
-
-## 環境變數配置（Phase 1: CLI/Server 拆分支援）
-
-系統現已支援透過環境變數覆寫預設路徑，方便 CLI 與 API 服務的獨立部署：
-
-| 環境變數 | 用途 | 預設值 |
-|---------|------|--------|
-| `OUTPUT_ROOT` | 輸出目錄（生成的音訊、字幕等） | `./output` |
-| `DATA_ROOT` | 數據目錄（books、transcripts 等） | `./data` |
-| `CONFIG_ROOT` | 配置檔案目錄（podcast_config.yaml 所在位置） | 專案根目錄 |
-
-**使用範例：**
-
-```bash
-# 使用自訂輸出目錄
-export OUTPUT_ROOT=/mnt/shared/podcast-output
-export DATA_ROOT=/mnt/shared/podcast-data
-./run.sh
-
-# API 服務讀取相同路徑
-export OUTPUT_ROOT=/mnt/shared/podcast-output
-uvicorn server.app.main:app
-```
-
-**依賴分離：**
-
-為了降低 Docker 映像大小與建置時間，我們將依賴分為兩類：
-- `requirements/cli.txt` - CLI 生產工具依賴（LLM、TTS、音訊處理等）
-- `requirements/server.txt` - API 服務依賴（FastAPI、GCS、Gemini API）
-
-這使得 API 部署不再需要安裝大量 CLI 相關套件，大幅減少映像大小。
-
-👉 詳細配置說明請參考 [`.env.example`](.env.example) 與 [配置文檔](docs/setup/configuration.md)
-
-## 文檔導航
-
-### 📚 按角色查找
-
-<table>
-<tr>
-<td width="33%">
-
-**🚀 新手入門**
-- [安裝指南](docs/setup/installation.md)
-- [配置說明](docs/setup/configuration.md)
-- [快速上手](docs/usage/workflow.md)
-
-</td>
-<td width="33%">
-
-**👨‍💻 開發者**
-- [架構設計](docs/development/architecture.md)
-- [貢獻指南](docs/development/contributing.md)
-- [測試指南](docs/development/testing.md)
-
-</td>
-<td width="33%">
-
-**🔧 運維人員**
-- [部署指南](docs/operations/deployment.md)
-- [故障排除](docs/operations/troubleshooting.md)
-- [性能優化](docs/operations/troubleshooting.md#性能優化)
-
-</td>
-</tr>
-</table>
-
-### 📖 按主題查找
-
-| 主題 | 文檔 | 描述 |
-|------|------|------|
-| **使用** | [CLI 指南](docs/usage/cli-guide.md) | run.sh 交互式菜單完整說明 |
-| **使用** | [工作流程](docs/usage/workflow.md) | 最佳實踐與批次處理 |
-| **API** | [API 參考](docs/api/reference.md) | 完整 REST API 端點說明 |
-| **API** | [使用範例](docs/api/examples.md) | curl、Python、JavaScript 範例 |
-| **配置** | [配置參數](docs/setup/configuration.md) | 六等級英語配置詳解 |
-
-👉 **[查看完整文檔目錄](docs/README.md)**
-
-## 技術棧
-
-```
-Python 3.12+
-├── 腳本生成: Gemini 2.5 Pro
-├── 音頻生成: Gemini Multi-Speaker TTS
-├── 字幕對齊: Montreal Forced Aligner
-├── API 框架: FastAPI
-```
-
-## 項目結構
-
-```
-storytelling-backend/
-├── run.sh                  # 主入口 CLI
-├── generate_script.py      # 腳本生成器
-├── generate_audio.py       # 音頻生成器
-├── generate_subtitles.py   # 字幕生成器
-├── preprocess_chapters.py  # 摘要預處理
-├── podcast_config.yaml     # 主配置文件
-├── server/                 # FastAPI 服務
-│   └── app/
-│       ├── main.py        # API 端點
-│       ├── schemas.py     # 數據模型
-│       └── services/      # 業務邏輯
-├── alignment/             # MFA 對齊工具
-├── storytelling_cli/      # CLI 實現
-├── data/                  # 書籍源文件
-│   └── foundation/        # 示例書籍
-└── output/                # 生成結果
-    └── foundation/
-        └── chapter0/
-            ├── podcast_script.txt
-            ├── podcast.wav
-            ├── podcast.mp3
-            └── subtitles.srt
-```
-
-> 提示：從現在起，音頻生成會同時寫出 `podcast.wav`（供後續處理使用）與 `podcast.mp3`（壓縮版，適合上傳/部署）。
-
-## 配置示例
-
-**支持的語言等級：**
-- `beginner` (A2) - 慢速、重點詞彙解釋、括號翻譯
-- `intermediate` (B1-B2) - 適度講解、讀書會風格
-- `advanced` (C1) - 純故事 + 文學分析
-
-**支持的長度模式：**
-- `short` - 4-6 分鐘（650 字）
-- `medium` - 7-10 分鐘（1100 字）
-- `long` - 12-15 分鐘（1500 字）
-
-```yaml
-# podcast_config.yaml
-basic:
-  english_level: "intermediate"
-  episode_length: "medium"
-  narrator_voice: "Aoede"
-  speaking_pace: "slow"
-```
-
-> 若想讓每次播客隨機換聲線，可改成 `narrator_voice: ["Aoede", "Puck", "Kore"]` 或設定 `narrator_voice: "random"` 並提供 `narrator_voice_candidates`。詳見[配置文檔](docs/setup/configuration.md#旁白聲音-narrator_voice)。
-
-## API 服務
-
-啟動開發服務器：
-```bash
+# 3. 啟動開發服務器
 uvicorn server.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -223,62 +37,266 @@ uvicorn server.app.main:app --reload --host 0.0.0.0 --port 8000
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
-**主要端點：**
-- `GET /books` - 書籍列表
-- `GET /books/{book_id}/chapters` - 章節列表
-- `GET /books/{book_id}/chapters/{chapter_id}` - 章節詳情
-- `GET /books/{book_id}/chapters/{chapter_id}/audio` - 音頻串流或簽名 URL
+### Docker 部署
+
+```bash
+# 建置映像
+docker build -t storytelling-api .
+
+# 執行容器
+docker run -p 8000:8000 \
+  -e DATA_ROOT=output \
+  -e GEMINI_API_KEY=your_key \
+  storytelling-api
+```
+
+## 環境變數配置
+
+### 核心設定
+
+| 環境變數 | 用途 | 預設值 |
+|---------|------|--------|
+| `DATA_ROOT` | 內容數據目錄（books、transcripts、音訊等） | `output` |
+| `CORS_ORIGINS` | CORS 允許的來源（逗號分隔） | `""` |
+| `GZIP_MIN_SIZE` | Gzip 壓縮的最小檔案大小（bytes） | `512` |
+
+### 媒體交付模式
+
+| 環境變數 | 用途 | 預設值 |
+|---------|------|--------|
+| `MEDIA_DELIVERY_MODE` | 交付模式：`local`、`gcs-direct`、`gcs-signed` | `local` |
+| `GCS_MIRROR_INCLUDE_SUFFIXES` | GCS 模式下需要鏡像的檔案類型（如 `.json,.srt`） | `None` |
+| `SIGNED_URL_TTL_SECONDS` | 簽名 URL 有效期限（秒） | `600` |
+| `STORYTELLING_GCS_CACHE_DIR` | GCS 快取目錄 | `/tmp/storytelling-output` |
+
+### 句子解釋功能
+
+| 環境變數 | 用途 | 預設值 |
+|---------|------|--------|
+| `SENTENCE_EXPLAINER_MODEL` | Gemini 模型名稱 | `gemini-2.5-flash-lite` |
+| `SENTENCE_EXPLAINER_TIMEOUT` | API 超時時間（秒） | `30` |
+| `SENTENCE_EXPLAINER_CACHE_SIZE` | 快取大小 | `128` |
+| `GEMINI_API_KEY` | Gemini API 金鑰 | (必需) |
+
+### 新聞整合（NewsData.io）
+
+| 環境變數 | 用途 | 預設值 |
+|---------|------|--------|
+| `NEWS_FEATURE_ENABLED` | 啟用新聞功能（`1`/`true`） | `false` |
+| `NEWSDATA_API_KEY` | NewsData.io API Key | (必需) |
+| `NEWSDATA_DEFAULT_LANGUAGE` | 預設語言代碼 | `en` |
+| `NEWSDATA_DEFAULT_COUNTRY` | 預設國家代碼（選填） | `None` |
+| `NEWS_CATEGORY_WHITELIST` | 允許的分類（逗號分隔，空白表示全部） | `""` |
+| `NEWS_CACHE_TTL_SECONDS` | 快取有效期限（秒） | `900` |
+| `NEWS_DEFAULT_COUNT` | 預設文章數量 | `10` |
+| `NEWS_MAX_COUNT` | 最大文章數量 | `25` |
+| `NEWS_EVENTS_DIR` | 事件日誌目錄 | `logs/news_events` |
+
+👉 詳細配置說明請參考 [`.env.example`](.env.example)
+
+## API 端點
+
+### 書籍與章節
+
+- `GET /books` - 取得書籍列表
+- `GET /books/{book_id}/chapters` - 取得章節列表
+- `GET /books/{book_id}/chapters/{chapter_id}` - 取得章節詳情
+- `GET /books/{book_id}/chapters/{chapter_id}/audio` - 音訊串流或簽名 URL
 - `GET /books/{book_id}/chapters/{chapter_id}/subtitles` - 字幕下載或簽名 URL
-- `GET /news/headlines` - 透過 NewsData.io 聚合分類新聞
-- `GET /news/search` - 透過 NewsData.io 搜尋最新文章
-- `POST /news/events` - 回報使用者點擊／互動事件
+
+### 新聞功能
+
+- `GET /news/headlines` - 分類新聞標題
+- `GET /news/search` - 搜尋最新文章
+- `POST /news/events` - 回報使用者互動事件
+
+### 句子解釋
+
+- `POST /explain` - 取得句子的即時說明
 
 👉 **[查看完整 API 文檔](docs/api/reference.md)**
 
-## 新聞整合（NewsData.io API）
+## 媒體交付模式
 
-| 設定 | 說明 |
-|------|------|
-| `NEWS_FEATURE_ENABLED` | 設為 `1`/`true` 後啟用 `/news/*` 端點 |
-| `NEWSDATA_API_KEY` | 必填，NewsData.io API Key（免費層 200 credits/天） |
-| `NEWSDATA_DEFAULT_LANGUAGE` | 預設 `en`，支援 80+ 種語言 |
-| `NEWSDATA_DEFAULT_COUNTRY` | 選填，如 `us`、`gb`、`tw` 等，用於篩選地區新聞 |
-| `NEWS_CATEGORY_WHITELIST` | 逗號分隔（如 `technology,business`）；留空則允許全部分類 |
-| `NEWS_CACHE_TTL_SECONDS` | 伺服器端快取 TTL，預設 900 秒，避免觸發 API 限額 |
-| `NEWS_DEFAULT_COUNT` / `NEWS_MAX_COUNT` | 控制每次拉取的文章數量（免費層最多 10 篇/次） |
-| `NEWS_EVENTS_DIR` | 用於存儲 `POST /news/events` 的 JSONL，預設 `logs/news_events` |
+### Local Mode（預設）
+
+API 直接從本地檔案系統串流音訊和字幕。適合開發環境。
+
+```bash
+export MEDIA_DELIVERY_MODE=local
+```
+
+### GCS Direct Mode
+
+API 從 GCS 下載檔案到記憶體後串流給客戶端。
+
+```bash
+export MEDIA_DELIVERY_MODE=gcs-direct
+export DATA_ROOT=gs://your-bucket/output
+```
+
+### GCS Signed URL Mode（推薦用於生產環境）
+
+API 回傳 GCS 簽名 URL，客戶端直接從 GCS 下載。節省記憶體，加快冷啟動。
+
+```bash
+export MEDIA_DELIVERY_MODE=gcs-signed
+export DATA_ROOT=gs://your-bucket/output
+export GCS_MIRROR_INCLUDE_SUFFIXES=.json,.srt
+export SIGNED_URL_TTL_SECONDS=600
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+```
+
+## 新聞整合
+
+本 API 整合 [NewsData.io](https://newsdata.io/) 提供分類新聞功能：
 
 **支援的分類：** business, entertainment, environment, food, health, politics, science, sports, technology, top, world
 
-> 建議在 Render Dashboard 內為上述環境變數建立 Secret，並在 iOS 端用 Remote Config 控制是否展示新聞分頁。註冊 NewsData.io 帳號即可免費使用，每天 200 credits（約 2000 篇文章）。
+**免費層級限制：**
+- 200 credits/天（約 2000 篇文章）
+- 最多 10 篇文章/請求
 
-> 🔐 若將後端部署到雲端平台（如 Render），建議設定 `MEDIA_DELIVERY_MODE=gcs-signed`，並搭配 `GCS_MIRROR_INCLUDE_SUFFIXES=.json` 與 `SIGNED_URL_TTL_SECONDS`，音檔/字幕會透過簽名 URL 直接由 GCS 下載，冷啟動更快也能節省記憶體。
+**使用範例：**
+
+```bash
+# 啟用新聞功能
+export NEWS_FEATURE_ENABLED=true
+export NEWSDATA_API_KEY=your_api_key
+
+# 可選：設定預設語言和國家
+export NEWSDATA_DEFAULT_LANGUAGE=en
+export NEWSDATA_DEFAULT_COUNTRY=us
+
+# 可選：限制分類
+export NEWS_CATEGORY_WHITELIST=technology,business
+```
+
+## 項目結構
+
+```
+backend/
+├── server/                  # FastAPI 服務
+│   └── app/
+│       ├── main.py         # API 端點
+│       ├── config.py       # 配置管理
+│       ├── schemas.py      # 數據模型
+│       └── services/       # 業務邏輯
+│           ├── books.py    # 書籍服務
+│           ├── media.py    # 媒體交付
+│           ├── news.py     # 新聞服務
+│           └── explain.py  # 句子解釋
+├── requirements/
+│   └── server.txt          # API 依賴（不含 CLI 套件）
+├── Dockerfile              # Docker 映像定義
+├── render.yaml             # Render 部署配置
+└── tests/                  # API 測試
+```
+
+## 依賴管理
+
+本專案使用精簡的 `requirements/server.txt`，**不包含** CLI 相關的大型套件（LLM、TTS、音訊處理等）：
+
+```bash
+# 只安裝 API 必需的依賴
+pip install -r requirements/server.txt
+```
+
+這使得 Docker 映像大小從 ~2GB 減少至 ~500MB，大幅縮短建置時間。
+
+## 部署
+
+### Render 部署
+
+1. 連接 GitHub 倉庫
+2. 選擇 `render.yaml` 自動配置
+3. 設定環境變數：
+   - `GEMINI_API_KEY`
+   - `DATA_ROOT=gs://your-bucket/output`
+   - `MEDIA_DELIVERY_MODE=gcs-signed`
+   - `GCS_MIRROR_INCLUDE_SUFFIXES=.json,.srt`
+4. 部署會自動觸發
+
+👉 **[查看詳細部署指南](DEPLOY_RENDER.md)**
+
+### 其他平台
+
+本 API 可部署至任何支援 Docker 的平台（AWS ECS、Google Cloud Run、Azure Container Instances 等）。
+
+## 開發與測試
+
+### 執行測試
+
+```bash
+# 安裝測試依賴
+pip install pytest httpx
+
+# 執行測試
+pytest tests/ -v
+```
+
+### 本地開發
+
+```bash
+# 啟動開發服務器（自動重載）
+uvicorn server.app.main:app --reload
+
+# 或使用 backend.sh
+./backend.sh
+```
+
+## 內容生產
+
+本 API 服務**僅負責提供內容**，內容生產（腳本生成、音訊合成、字幕對齊）請使用 **[storytelling-cli](../storytelling-cli/)**。
+
+### 共享目錄架構
+
+```
+podcast-workspace/
+├── backend/           # API 服務（本專案）
+├── storytelling-cli/  # 內容生產工具
+├── data/             # 共享：書籍源文件（CLI 寫入）
+└── output/           # 共享：生成結果（CLI 寫入、API 讀取）
+    └── foundation/
+        └── chapter0/
+            ├── metadata.json
+            ├── podcast.mp3
+            └── subtitles.srt
+```
 
 ## 常見問題
 
-### Q: 字幕不同步怎麼辦？
-A: 已使用 Montreal Forced Aligner 實現詞級對齊，自動解決同步問題。
+### Q: 如何更改 API 監聽的 host 和 port？
 
-### Q: 如何批次處理多個章節？
-A: 使用 `./run.sh` 選項 1）或 2），支持範圍選擇（如 `0-5,7-9`）。
+A: 使用 uvicorn 參數：
+```bash
+uvicorn server.app.main:app --host 0.0.0.0 --port 8080
+```
 
-### Q: 如何更改聲音？
-A: 修改 `podcast_config.yaml` 中的聲線配置；支援固定值、候選清單或 `random` 隨機模式。詳細示例見[配置文檔](docs/setup/configuration.md#旁白聲音-narrator_voice)。
+### Q: 如何啟用 CORS？
+
+A: 設定環境變數：
+```bash
+export CORS_ORIGINS="http://localhost:3000,https://your-app.com"
+```
+
+### Q: GCS 模式下如何處理認證？
+
+A: 設定服務帳號金鑰：
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+```
+
+### Q: 如何監控 API 效能？
+
+A: FastAPI 內建 `/docs` 可以測試端點，可整合 Prometheus、Grafana 等監控工具。
 
 👉 **[查看更多問題](docs/operations/troubleshooting.md)**
 
-## 開發狀態
+## 相關專案
 
-- ✅ 單人旁白腳本生成
-- ✅ Gemini TTS 音頻生成
-- ✅ MFA 詞級字幕對齊
-- ✅ FastAPI REST API
-- 📋 音頻質量自動評估
-- 📋 多聲線對話模式
-
-## 相關項目
-
-- [audio-earning-ios](../audio-earning-ios) - iOS 前端播放器應用
+- [storytelling-cli](../storytelling-cli/) - 內容生產工具（腳本、音訊、字幕）
+- [audio-earning-ios](../audio-earning-ios/) - iOS 前端播放器應用
 
 ## 許可證
 
