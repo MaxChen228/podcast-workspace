@@ -9,14 +9,14 @@ graph TB
 
         A1 --> A1_1 --> A1_2 --> A1_3
 
-        OUTPUT[output/<br/>foundation/chapter0/<br/>├─ podcast_script.txt<br/>├─ podcast.wav/mp3<br/>├─ subtitles.srt<br/>└─ metadata.json]
+        OUTPUT[output/<br/>foundation/chapter0/<br/>podcast_script.txt<br/>podcast.wav/mp3<br/>subtitles.srt<br/>metadata.json]
 
         A1_3 --> OUTPUT
         A2 --> |import_gemini_dialogue.py| OUTPUT
     end
 
     subgraph "雲端儲存層"
-        GCS[Google Cloud Storage<br/>gs://storytelling-output/output/<br/><br/>📦 完整存儲所有內容<br/>🎵 音訊 .mp3 (數百 MB)<br/>📝 字幕 .srt<br/>📄 腳本 + metadata .json]
+        GCS[Google Cloud Storage<br/>gs://storytelling-output/output<br/><br/>📦 完整存儲所有內容<br/>🎵 音訊 .mp3 數百 MB<br/>📝 字幕 .srt<br/>📄 腳本 + metadata .json]
     end
 
     subgraph "API 服務層 (Render Deployment)"
@@ -45,9 +45,9 @@ graph TB
     OUTPUT -.->|sync_output.sh<br/>上傳所有文件| GCS
     GCS -.->|冷啟動同步<br/>僅下載 .json metadata| B1
 
-    B2 -->|REST API<br/>GET /books<br/>GET /books/{book}/chapters<br/>GET /audio → HTTP 307<br/>GET /subtitles → HTTP 307| C
+    B2 -->|REST API<br/>GET /books<br/>GET /books/ID/chapters<br/>GET /audio - 307<br/>GET /subtitles - 307| C
 
-    GCS -.->|gcs-public 模式<br/>HTTP 307 轉址<br/>https://storage.googleapis.com/...| C
+    GCS -.->|gcs-public 模式<br/>HTTP 307 轉址<br/>storage.googleapis.com| C
 
     style A1 fill:#e3f2fd
     style A2 fill:#e3f2fd
