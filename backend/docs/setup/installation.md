@@ -22,7 +22,7 @@
 
 ```bash
 git clone <your-repo-url>
-cd storytelling-backend
+cd backend
 ```
 
 ### 2. 創建虛擬環境
@@ -345,5 +345,5 @@ docker run -it --rm \
 ## 需要幫助？
 
 - 📖 查看 [故障排除指南](../operations/troubleshooting.md)
-- 🐛 [報告安裝問題](https://github.com/your-org/storytelling-backend/issues)
-- 💬 [社群討論](https://github.com/your-org/storytelling-backend/discussions)
+- 🐛 [報告安裝問題](https://github.com/MaxChen228/podcast-workspace/issues)
+- 💬 [社群討論](https://github.com/MaxChen228/podcast-workspace/discussions)

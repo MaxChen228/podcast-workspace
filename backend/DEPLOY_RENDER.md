@@ -54,7 +54,7 @@ git push origin main
 
 3. 連結 GitHub repository：
    - 授權 Render 訪問你的 GitHub
-   - 選擇 `storytelling-backend` repository
+   - 選擇 `podcast-workspace` repository，Render 會自動偵測 `backend/` 子目錄的 `render.yaml`
 
 4. Render 會自動偵測 `render.yaml`：
    - Service Name: `storytelling-backend`

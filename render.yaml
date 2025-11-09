@@ -4,7 +4,7 @@ services:
     env: docker
     plan: starter
     region: singapore  # 最近的區域（新加坡，延遲約 60ms）
-    rootDir: storytelling-backend  # Monorepo 子目錄
+    rootDir: backend  # Monorepo 子目錄 (FastAPI 專案)
     dockerfilePath: ./Dockerfile
     dockerContext: .
 

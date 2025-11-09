@@ -1,6 +1,6 @@
 graph TB
     subgraph "內容生產層 (本地機器/專用伺服器)"
-        A1[生產機 - Storytelling<br/>storytelling-backend/run.sh]
+        A1[生產機 - Storytelling<br/>storytelling-cli/run.sh]
         A2[生產機 - Podcast<br/>gemini-2-podcast/]
 
         A1_1[Step 1: 生成腳本<br/>generate_script.py<br/>Gemini 2.5 Pro]
@@ -20,7 +20,7 @@ graph TB
     end
 
     subgraph "API 服務層 (Render Deployment)"
-        B[FastAPI Server<br/>GitHub: podcast-workspace<br/>rootDir: storytelling-backend<br/><br/>🔹 不生成內容<br/>🔹 掃描 GCS 遠程數據<br/>🔹 建立書籍/章節索引<br/>🔹 Starter Plan @ Singapore]
+        B[FastAPI Server<br/>GitHub: podcast-workspace<br/>rootDir: backend<br/><br/>🔹 不生成內容<br/>🔹 掃描 GCS 遠程數據<br/>🔹 建立書籍/章節索引<br/>🔹 Starter Plan @ Singapore]
 
         B1[GCSMirror<br/>冷啟動同步 .json 到本地<br/>/tmp/storytelling-output<br/>節省記憶體與啟動時間]
         B2[OutputDataCache<br/>解析 metadata.json<br/>建立 API 索引]

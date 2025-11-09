@@ -1,11 +1,13 @@
 # CLI 使用指南
 
+> ⚠️ **提醒**：CLI 子專案已搬移至 `storytelling-cli/`。以下步驟請在該資料夾內進行，後端 (`backend/`) 只負責 FastAPI 服務。
+
 `run.sh` 交互式命令行界面完整使用說明。
 
 ## 快速開始
 
 ```bash
-cd storytelling-backend
+cd storytelling-cli
 ./run.sh
 ```
 
