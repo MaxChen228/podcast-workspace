@@ -14,7 +14,6 @@ final class BookListViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published private(set) var libraryRecords: [LibraryBookRecord] = []
 
-    private let service: APIServiceProtocol
     private let cacheManager: CacheManaging
     private let libraryManager: BookLibraryManaging
     private var hasLoaded = false
@@ -22,11 +21,9 @@ final class BookListViewModel: ObservableObject {
     private var libraryObserver: NSObjectProtocol?
 
     init(
-        service: APIServiceProtocol = APIService.shared,
         cacheManager: CacheManaging = CacheManager.shared,
         libraryManager: BookLibraryManaging = BookLibraryManager()
     ) {
-        self.service = service
         self.cacheManager = cacheManager
         self.libraryManager = libraryManager
 
@@ -82,9 +79,27 @@ final class BookListViewModel: ObservableObject {
         reloadAfterBackendChange()
     }
 
+    private func handleLibraryChange() {
+        hasLoaded = false
+        loadBooks(force: true)
+    }
+
     private func reloadAfterBackendChange() {
         hasLoaded = false
         loadBooks(force: true)
+    }
+
+    func deleteBooks(at offsets: IndexSet) {
+        let ids = offsets.map { books[$0].id }
+        Task {
+            for id in ids {
+                await libraryManager.removeBookFromLibrary(bookID: id)
+            }
+        }
+    }
+
+    func record(for bookID: String) -> LibraryBookRecord? {
+        libraryRecords.first { $0.id == bookID }
     }
 }
 

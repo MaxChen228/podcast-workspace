@@ -50,8 +50,6 @@ final class AppDependencyContainer: DependencyResolving, ObservableObject {
     @MainActor
     func makeBookListViewModel() -> BookListViewModel {
         BookListViewModel(
-            service: apiService,
-            backendStore: backendStore,
             cacheManager: cacheManager,
             libraryManager: bookLibraryManager
         )

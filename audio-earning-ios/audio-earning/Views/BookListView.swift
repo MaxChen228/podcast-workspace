@@ -542,7 +542,6 @@ struct BackendConfigurationView: View {
     }
 }
 
-
 private struct BookCoverThumbnail: View {
     let url: URL?
 
