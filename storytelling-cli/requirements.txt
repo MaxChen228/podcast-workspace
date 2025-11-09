@@ -1,0 +1,4 @@
+# Storytelling CLI Dependencies
+# 內容生產工具依賴（包含 LLM、TTS、音訊處理等）
+
+-r requirements/cli.txt

@@ -50,6 +50,12 @@ dist/
 *.egg-info/
 
 # ==========================================
+# Shared Directories (Phase 2: CLI/Server Split)
+# ==========================================
+storytelling-data/
+storytelling-output/
+
+# ==========================================
 # MFA (Montreal Forced Aligner)
 # ==========================================
 .mfa_work/

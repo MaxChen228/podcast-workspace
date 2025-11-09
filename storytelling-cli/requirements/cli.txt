@@ -1,0 +1,9 @@
+# CLI 內容生產工具依賴
+# 包含所有 LLM/TTS/音訊處理相關套件
+
+# 引入完整的 base.txt 依賴（LLM、TTS、音訊處理等）
+-r base.txt
+
+# CLI 專屬工具（可能已在 base.txt 中，這裡確保存在）
+# typer 和 rich 用於 CLI 介面
+# 注意：base.txt 已包含這些，此處僅作說明用途

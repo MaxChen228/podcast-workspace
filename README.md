@@ -9,13 +9,18 @@
 
 ## 🎯 專案總覽
 
-此 Monorepo 包含三個緊密整合的子專案，共同組成完整的 AI 播客學習平台：
+此 Monorepo 包含四個緊密整合的子專案，共同組成完整的 AI 播客學習平台：
 
 | 子專案 | 技術棧 | 角色 | 快速入口 |
 | --- | --- | --- | --- |
-| [storytelling-backend/](storytelling-backend/) | Python 3.12+, FastAPI, Gemini 2.5, MFA | 🏭 **內容生成引擎** + REST API | [後端 README](storytelling-backend/README.md) |
+| [storytelling-cli/](storytelling-cli/) | Python 3.12+, Gemini 2.5, MFA | 🏭 **CLI 內容生產工具** - 腳本/音訊/字幕生成 | [CLI README](storytelling-cli/README.md) |
+| [storytelling-backend/](storytelling-backend/) | Python 3.12+, FastAPI, GCS | 🌐 **REST API 服務** - 提供內容 API | [後端 README](storytelling-backend/README.md) |
 | [audio-earning-ios/](audio-earning-ios/) | Swift 5.9+, SwiftUI, AVFoundation | 📱 **iOS 播放器** - 沉浸式學習體驗 | [前端 README](audio-earning-ios/README.md) |
 | [gemini-2-podcast/](gemini-2-podcast/) | Python, Gemini Multi-Speaker TTS | 🎙️ **對話式播客生成器** | [Podcast README](gemini-2-podcast/README.md) |
+
+**共享目錄：**
+- `storytelling-data/` - 書籍源文件、transcripts
+- `storytelling-output/` - 生成的播客內容（腳本、音訊、字幕）
 
 ---
 
@@ -24,15 +29,15 @@
 ```mermaid
 graph TB
     subgraph "內容生產層 (本地機器)"
-        A1[生產機 - Storytelling<br/>storytelling-backend/run.sh]
-        A2[生產機 - Podcast<br/>gemini-2-podcast/]
+        A1[CLI 工具<br/>storytelling-cli/run.sh]
+        A2[對話生成器<br/>gemini-2-podcast/]
 
         A1_1[Step 1: 生成腳本<br/>Gemini 2.5 Pro]
         A1_2[Step 2: 生成音頻<br/>Gemini TTS]
         A1_3[Step 3: 生成字幕<br/>MFA 詞級對齊]
 
         A1 --> A1_1 --> A1_2 --> A1_3
-        OUTPUT[output/<br/>podcast_script.txt<br/>podcast.mp3<br/>subtitles.srt<br/>metadata.json]
+        OUTPUT[共享輸出目錄<br/>storytelling-output/<br/>podcast_script.txt<br/>podcast.mp3<br/>subtitles.srt<br/>metadata.json]
         A1_3 --> OUTPUT
         A2 --> OUTPUT
     end
@@ -42,14 +47,14 @@ graph TB
     end
 
     subgraph "API 服務層 (Render)"
-        B[FastAPI Server<br/>提供 REST API]
+        B[FastAPI Server<br/>storytelling-backend/<br/>提供 REST API]
     end
 
     subgraph "前端消費層"
         C[iOS App<br/>SwiftUI]
     end
 
-    OUTPUT -.->|sync_output.sh| GCS
+    OUTPUT -.->|scripts/sync_output.sh| GCS
     GCS -.->|GCSMirror| B
     B -->|REST API| C
     GCS -.->|307 轉址| C
@@ -84,17 +89,17 @@ git clone https://github.com/MaxChen228/podcast-workspace.git
 cd podcast-workspace
 ```
 
-### 2. 後端設置（內容生成 + API）
+### 2. CLI 設置（內容生成）
 
 ```bash
-cd storytelling-backend
+cd storytelling-cli
 
 # 創建虛擬環境
 python3 -m venv .venv
 source .venv/bin/activate
 
 # 安裝依賴
-pip install -r requirements/base.txt
+pip install -r requirements.txt
 
 # 配置環境變數
 cp .env.example .env
@@ -102,14 +107,31 @@ cp .env.example .env
 
 # 生成內容（互動式 CLI）
 ./run.sh
+```
 
-# 或啟動 API 服務
+**產出位置：** `storytelling-output/<book>/<chapter>/`
+
+### 3. API 服務設置（選填）
+
+```bash
+cd storytelling-backend
+
+# 創建虛擬環境（如果還沒有）
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 安裝 API 依賴
+pip install -r requirements/server.txt
+
+# 配置環境變數
+cp .env.example .env
+# 編輯 .env 添加 GEMINI_API_KEY 和 GCS 設定
+
+# 啟動 API 服務
 uvicorn server.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**產出位置：** `storytelling-backend/output/<book>/<chapter>/`
-
-### 3. iOS App 設置
+### 4. iOS App 設置
 
 ```bash
 cd audio-earning-ios
@@ -120,7 +142,7 @@ open audio-earning.xcodeproj  # Xcode 15+
 2. 選擇模擬器或實機
 3. 執行 (⌘R)
 
-### 4. Gemini 對話式播客（可選）
+### 5. Gemini 對話式播客（可選）
 
 ```bash
 cd gemini-2-podcast
@@ -170,15 +192,44 @@ podcast-workspace/                 # Monorepo 根目錄
 ├── docs/                          # 共用文檔
 │   └── diagrams/                  # 複雜 Mermaid 圖表
 │       └── full-architecture.mmd  # 完整架構圖
-├── storytelling-backend/          # 後端內容生成 + API
+│
+├── storytelling-cli/              # 🆕 CLI 內容生產工具
 │   ├── run.sh                     # CLI 主入口
-│   ├── server/app/main.py         # FastAPI 應用
 │   ├── generate_script.py         # 腳本生成器
 │   ├── generate_audio.py          # 音頻生成器
 │   ├── generate_subtitles.py      # 字幕生成器
-│   ├── output/                    # 生成結果
-│   ├── data/                      # 書籍源文件
+│   ├── storytelling_cli/          # CLI 實現
+│   ├── alignment/                 # MFA 對齊工具
+│   ├── scripts/                   # 輔助腳本
+│   ├── requirements/              # CLI 依賴
+│   │   ├── cli.txt               # CLI 專屬依賴
+│   │   ├── base.txt              # 基礎依賴
+│   │   └── core.txt              # 核心依賴
+│   └── README.md                  # CLI 文檔
+│
+├── storytelling-backend/          # FastAPI REST API 服務
+│   ├── server/app/main.py         # FastAPI 應用
+│   ├── requirements/              # API 依賴
+│   │   └── server.txt            # 精簡的 API 依賴（不含 CLI 套件）
+│   ├── tests/                     # API 測試
+│   ├── Dockerfile                 # API 部署映像（精簡版）
 │   └── docs/                      # 後端文檔
+│
+├── storytelling-data/             # 🆕 共享資料目錄
+│   ├── Foundation/                # 書籍章節源文件
+│   ├── Project Hail Mary/
+│   ├── Mistborn.../
+│   └── transcripts/               # 轉錄文本
+│
+├── storytelling-output/           # 🆕 共享輸出目錄
+│   ├── Foundation/                # 生成的播客內容
+│   │   └── chapter0/
+│   │       ├── podcast_script.txt
+│   │       ├── podcast.mp3
+│   │       ├── subtitles.srt
+│   │       └── metadata.json
+│   └── ...
+│
 ├── audio-earning-ios/             # iOS 前端 App
 │   ├── audio-earning/             # SwiftUI 源碼
 │   │   ├── Views/                 # UI 元件
@@ -186,10 +237,13 @@ podcast-workspace/                 # Monorepo 根目錄
 │   │   ├── Services/              # API, 快取, 備份
 │   │   └── Utilities/             # 工具函式
 │   └── docs/                      # iOS 文檔
+│
 ├── gemini-2-podcast/              # 對話式播客生成器
 │   ├── generate_podcast.py        # 主程式
 │   └── README.md                  # 使用說明
+│
 └── scripts/                       # 跨專案腳本
+    ├── sync_output.sh             # GCS 同步腳本
     └── convert_wav_to_mp3.py      # 音訊轉換工具
 ```
 
@@ -263,15 +317,19 @@ podcast-workspace/                 # Monorepo 根目錄
 ## 🔧 常用命令
 
 ```bash
-# 後端：生成內容
+# CLI：生成內容
+cd storytelling-cli
+./run.sh                              # 互動式 CLI 生成播客
+
+# API：啟動服務
 cd storytelling-backend
-./run.sh                              # 互動式 CLI
-./run.sh && uvicorn server.app.main:app --reload  # 生成後啟動 API
+uvicorn server.app.main:app --reload --host 0.0.0.0 --port 8000
 
-# 後端：部署到 Render
-git push origin main                  # 自動觸發部署
+# 部署：推送到 Render
+git push origin main                  # 自動觸發 API 部署
 
-# 後端：同步到 GCS
+# 同步：上傳到 GCS
+cd podcast-workspace
 ./scripts/sync_output.sh
 
 # iOS：清除快取
@@ -287,11 +345,12 @@ git log --oneline --graph --all
 ## 🌟 特色亮點
 
 1. **Monorepo 架構** - 統一版本管理，簡化協作
-2. **AI 驅動生成** - Gemini 2.5 Pro + TTS 生成高品質內容
-3. **詞級精準字幕** - MFA 對齊，避免估算漂移
-4. **整合型新聞牆** - 一鍵啟用 NewsData.io API，無需自建爬蟲即可驗證產品假設
-5. **智慧快取策略** - 多層快取，最佳化使用者體驗
-6. **靈活部署** - Render 一鍵部署，GCS 媒體儲存
+2. **職責分離設計** - CLI 生產工具與 API 服務完全解耦，獨立開發部署
+3. **AI 驅動生成** - Gemini 2.5 Pro + TTS 生成高品質內容
+4. **詞級精準字幕** - MFA 對齊，避免估算漂移
+5. **整合型新聞牆** - 一鍵啟用 NewsData.io API，無需自建爬蟲即可驗證產品假設
+6. **智慧快取策略** - 多層快取，最佳化使用者體驗
+7. **靈活部署** - Docker 精簡映像，Render 一鍵部署，GCS 媒體儲存
 
 ---
 
