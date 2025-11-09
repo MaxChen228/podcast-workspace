@@ -31,6 +31,9 @@ services:
       - key: GCS_MIRROR_INCLUDE_SUFFIXES
         value: .json
 
+      - key: CONFIG_ROOT
+        value: config
+
       # ==========================================
       # Gemini API 配置
       # ==========================================

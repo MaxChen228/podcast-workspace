@@ -27,7 +27,7 @@ RUN pip install --no-cache-dir -r requirements/server.txt
 # 複製伺服器程式碼以及需要的資源
 COPY server/ ./server/
 COPY docs/ ./docs/
-COPY podcast_config.yaml ./podcast_config.yaml
+COPY config/ ./config/
 
 # 若 FastAPI 服務會讀取版本資訊，可在此加入 git metadata (可選)
 # ARG GIT_SHA=unknown

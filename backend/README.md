@@ -57,6 +57,7 @@ docker run -p 8000:8000 \
 | 環境變數 | 用途 | 預設值 |
 |---------|------|--------|
 | `DATA_ROOT` | 內容數據目錄（books、transcripts、音訊等） | `output` |
+| `CONFIG_ROOT` | FastAPI 服務讀取 `podcast_config.yaml` 的目錄 | `config` |
 | `CORS_ORIGINS` | CORS 允許的來源（逗號分隔） | `""` |
 | `GZIP_MIN_SIZE` | Gzip 壓縮的最小檔案大小（bytes） | `512` |
 
