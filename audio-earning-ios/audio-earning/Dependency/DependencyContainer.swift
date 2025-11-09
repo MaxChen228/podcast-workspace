@@ -14,8 +14,10 @@ protocol DependencyResolving: AnyObject {
     var cacheManager: CacheManaging { get }
     var newsService: NewsServiceProtocol { get }
     var newsPreferenceStore: NewsPreferenceStoring { get }
+    var bookLibraryManager: BookLibraryManaging { get }
 
     @MainActor func makeBookListViewModel() -> BookListViewModel
+    @MainActor func makeBookCatalogViewModel() -> BookCatalogViewModel
     @MainActor func makeNewsFeedViewModel() -> NewsFeedViewModel
 }
 
@@ -26,19 +28,22 @@ final class AppDependencyContainer: DependencyResolving, ObservableObject {
     let cacheManager: CacheManaging
     let newsService: NewsServiceProtocol
     let newsPreferenceStore: NewsPreferenceStoring
+    let bookLibraryManager: BookLibraryManaging
 
     init(
         apiService: APIServiceProtocol = APIService.shared,
         backendStore: BackendConfigurationStoring = BackendConfigurationStore.shared,
         cacheManager: CacheManaging = CacheManager.shared,
         newsService: NewsServiceProtocol = NewsService.shared,
-        newsPreferenceStore: NewsPreferenceStoring = NewsPreferenceStore.shared
+        newsPreferenceStore: NewsPreferenceStoring = NewsPreferenceStore.shared,
+        bookLibraryManager: BookLibraryManaging = BookLibraryManager()
     ) {
         self.apiService = apiService
         self.backendStore = backendStore
         self.cacheManager = cacheManager
         self.newsService = newsService
         self.newsPreferenceStore = newsPreferenceStore
+        self.bookLibraryManager = bookLibraryManager
     }
 
     @MainActor
@@ -46,7 +51,16 @@ final class AppDependencyContainer: DependencyResolving, ObservableObject {
         BookListViewModel(
             service: apiService,
             backendStore: backendStore,
-            cacheManager: cacheManager
+            cacheManager: cacheManager,
+            libraryManager: bookLibraryManager
+        )
+    }
+
+    @MainActor
+    func makeBookCatalogViewModel() -> BookCatalogViewModel {
+        BookCatalogViewModel(
+            service: apiService,
+            libraryManager: bookLibraryManager
         )
     }
 

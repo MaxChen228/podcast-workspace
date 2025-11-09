@@ -12,23 +12,28 @@ final class BookListViewModel: ObservableObject {
     @Published var books: [Book] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published private(set) var libraryRecords: [LibraryBookRecord] = []
     @Published private(set) var endpoints: [BackendEndpoint] = []
     @Published private(set) var selectedEndpointID: UUID?
 
     private let service: APIServiceProtocol
     private let backendStore: BackendConfigurationStoring
     private let cacheManager: CacheManaging
+    private let libraryManager: BookLibraryManaging
     private var hasLoaded = false
     private var backendObserver: NSObjectProtocol?
+    private var libraryObserver: NSObjectProtocol?
 
     init(
         service: APIServiceProtocol = APIService.shared,
         backendStore: BackendConfigurationStoring = BackendConfigurationStore.shared,
-        cacheManager: CacheManaging = CacheManager.shared
+        cacheManager: CacheManaging = CacheManager.shared,
+        libraryManager: BookLibraryManaging = BookLibraryManager()
     ) {
         self.service = service
         self.backendStore = backendStore
         self.cacheManager = cacheManager
+        self.libraryManager = libraryManager
         refreshEndpoints()
 
         backendObserver = NotificationCenter.default.addObserver(forName: .backendConfigurationDidChange, object: nil, queue: .main) { [weak self] _ in
@@ -36,10 +41,17 @@ final class BookListViewModel: ObservableObject {
                 self?.handleBackendChange()
             }
         }
+
+        libraryObserver = NotificationCenter.default.addObserver(forName: .bookLibraryDidChange, object: nil, queue: .main) { [weak self] _ in
+            self?.handleLibraryChange()
+        }
     }
 
     deinit {
         if let observer = backendObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        if let observer = libraryObserver {
             NotificationCenter.default.removeObserver(observer)
         }
     }
@@ -49,23 +61,18 @@ final class BookListViewModel: ObservableObject {
         hasLoaded = true
 
         Task { [weak self] in
-            await self?.fetchBooks()
+            await self?.fetchLibraryBooks()
         }
     }
 
-    private func fetchBooks() async {
+    private func fetchLibraryBooks() async {
         isLoading = true
         errorMessage = nil
 
-        do {
-            let responses = try await service.fetchBooks()
-            books = responses.map { response in
-                let normalizedCover = response.coverURL.map { APIService.normalizedMediaURL(from: $0) }
-                return Book(id: response.id, title: response.title, coverURL: normalizedCover)
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-            books = []
+        let records = await libraryManager.loadLibraryBooks()
+        libraryRecords = records
+        books = records.map { record in
+            Book(id: record.id, title: record.title, coverURL: record.coverURL)
         }
 
         isLoading = false
@@ -145,6 +152,11 @@ final class BookListViewModel: ObservableObject {
         reloadAfterBackendChange()
     }
 
+    private func handleLibraryChange() {
+        hasLoaded = false
+        loadBooks(force: true)
+    }
+
     private func reloadAfterBackendChange() {
         hasLoaded = false
         loadBooks(force: true)
@@ -159,5 +171,18 @@ final class BookListViewModel: ObservableObject {
         string
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             .lowercased()
+    }
+
+    func deleteBooks(at offsets: IndexSet) {
+        let ids = offsets.map { books[$0].id }
+        Task {
+            for id in ids {
+                await libraryManager.removeBookFromLibrary(bookID: id)
+            }
+        }
+    }
+
+    func record(for bookID: String) -> LibraryBookRecord? {
+        libraryRecords.first { $0.id == bookID }
     }
 }

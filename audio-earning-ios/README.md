@@ -14,6 +14,7 @@
 4. 第一次啟動若找不到後端，請在「書籍」分頁 → 左上角 **Server Settings** 新增或選擇端點；預設的 Production / Local Development URL 由 `BackendConfigurationStore` 寫死並存於 `UserDefaults`，與 Info.plist 無關，可自行新增環境。
 
 ## 核心功能
+- 📚 書城 / 書庫分離：書城專注瀏覽與加入收藏，加入後在「我的書庫」播放，清楚區分探索與收藏。
 - 📚 書籍 / 章節瀏覽：支援離線快照、批次下載、快取 TTL 6 小時。
 - 🎧 播放器：`AVPlayer` + 波形視覺化、進度追蹤與自動儲存。
 - 📝 字幕與翻譯：詞級高亮、字幕樣式設定、逐句翻譯與句子/片語解釋。

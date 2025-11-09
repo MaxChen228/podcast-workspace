@@ -28,7 +28,7 @@ struct BookListView: View {
     var body: some View {
         Group {
             if viewModel.isLoading && viewModel.books.isEmpty {
-                ProgressView("Loading books...")
+                ProgressView("載入書庫…")
                     .padding()
             } else if let message = viewModel.errorMessage, viewModel.books.isEmpty {
                 VStack(spacing: 12) {
@@ -45,23 +45,68 @@ struct BookListView: View {
                     .buttonStyle(.borderedProminent)
                 }
                 .padding()
+            } else if viewModel.books.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "books.vertical")
+                        .font(.largeTitle)
+                    Text("書庫目前是空的")
+                        .font(.headline)
+                    Text("前往「書城」分頁瀏覽可用書籍並加入收藏。")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    Button {
+                        viewModel.loadBooks(force: true)
+                    } label: {
+                        Label("重新整理書庫", systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding()
             } else {
-                List(viewModel.books) { book in
-                    NavigationLink(destination: ChapterListView(book: book)) {
-                        HStack(alignment: .center, spacing: 14) {
-                            BookCoverThumbnail(url: book.coverURL)
+                List {
+                    ForEach(viewModel.books) { book in
+                        if let record = viewModel.record(for: book.id) {
+                            NavigationLink(destination: ChapterListView(record: record)) {
+                                HStack(alignment: .center, spacing: 14) {
+                                    BookCoverThumbnail(url: book.coverURL)
 
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(book.title.isEmpty ? book.id : book.title)
-                                    .font(.headline)
-                                    .foregroundStyle(.primary)
-                                Text(book.id)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(book.title.isEmpty ? book.id : book.title)
+                                            .font(.headline)
+                                            .foregroundStyle(.primary)
+                                        if let subtitle = subtitle(for: book) {
+                                            Text(subtitle)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .padding(.vertical, 6)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    deleteBook(book)
+                                } label: {
+                                    Label("移除", systemImage: "trash")
+                                }
+                            }
+                        } else {
+                            HStack(alignment: .center, spacing: 14) {
+                                BookCoverThumbnail(url: book.coverURL)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(book.title.isEmpty ? book.id : book.title)
+                                        .font(.headline)
+                                    Text("資料遺失，請重新加入書庫")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding(.vertical, 6)
+                            .disabled(true)
                         }
-                        .padding(.vertical, 6)
                     }
                 }
                 .listStyle(.insetGrouped)
@@ -72,7 +117,7 @@ struct BookListView: View {
                 }
             }
         }
-        .navigationTitle("Choose Book")
+        .navigationTitle("我的書庫")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -156,6 +201,19 @@ struct BookListView: View {
         } else {
             return "未找到可刪除的媒體快取，章節資料已重整。聆聽進度已保留。"
         }
+    }
+
+    private func deleteBook(_ book: Book) {
+        if let index = viewModel.books.firstIndex(where: { $0.id == book.id }) {
+            viewModel.deleteBooks(at: IndexSet(integer: index))
+        }
+    }
+
+    private func subtitle(for book: Book) -> String? {
+        guard let record = viewModel.record(for: book.id) else { return nil }
+        let added = record.addedAt.formatted(date: .abbreviated, time: .shortened)
+        let synced = record.lastSyncedAt.formatted(date: .abbreviated, time: .shortened)
+        return "加入：\(added) ｜ 同步：\(synced)"
     }
 }
 
@@ -515,7 +573,7 @@ private struct BackendConfigurationSheet: View {
     }
 }
 
-private struct BookCoverThumbnail: View {
+struct BookCoverThumbnail: View {
     let url: URL?
 
     private static let placeholderGradient = LinearGradient(

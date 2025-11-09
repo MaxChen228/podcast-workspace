@@ -77,6 +77,7 @@ enum BulkDownloadError: LocalizedError {
 @MainActor
 final class ChapterListViewModel: ObservableObject {
     let book: Book
+    private var libraryRecord: LibraryBookRecord
 
     @Published var chapters: [ChapterSummaryModel] = []
     @Published var isLoading = false
@@ -102,13 +103,14 @@ final class ChapterListViewModel: ObservableObject {
     private var bulkDownloadStartTime: Date?
 
     init(
-        book: Book,
+        record: LibraryBookRecord,
         service: APIServiceProtocol = APIService.shared,
         chapterListCache: ChapterListCaching = ChapterListCacheStore.shared,
         chapterCache: ChapterCaching = ChapterCacheStore.shared,
         progressStore: ListeningProgressManaging = ListeningProgressStore.shared
     ) {
-        self.book = book
+        self.libraryRecord = record
+        self.book = Book(id: record.id, title: record.title, coverURL: record.coverURL)
         self.service = service
         self.chapterListCache = chapterListCache
         self.chapterCache = chapterCache
@@ -127,6 +129,8 @@ final class ChapterListViewModel: ObservableObject {
     private func performInitialLoad(force: Bool) async {
         errorMessage = nil
         isOffline = false
+
+        await seedFromLibraryRecordIfNeeded()
 
         let cachedList = await chapterListCache.list(for: book.id)
         if let cachedList {
@@ -204,6 +208,30 @@ final class ChapterListViewModel: ObservableObject {
         if !silent {
             isLoading = false
         }
+    }
+
+    private func seedFromLibraryRecordIfNeeded() async {
+        guard chapters.isEmpty else { return }
+        guard !libraryRecord.chapters.isEmpty else { return }
+
+        let summaries = libraryRecord.chapters.map { record in
+            ChapterSummaryModel(
+                id: record.id,
+                title: record.title,
+                audioAvailable: record.audioAvailable,
+                subtitlesAvailable: record.subtitlesAvailable,
+                metrics: record.metrics,
+                progress: nil,
+                cacheStatus: .empty,
+                downloadState: resolveDownloadState(for: record.id, cacheStatus: .empty)
+            )
+        }
+
+        let enriched = await enrichLocalState(for: summaries)
+        chapters = sortChapters(enriched)
+        lastSyncedAt = libraryRecord.lastSyncedAt
+        showingCachedSnapshot = true
+        showingStaleCache = false
     }
 
     func refreshProgress() {

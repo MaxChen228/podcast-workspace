@@ -9,15 +9,19 @@ import SwiftUI
 
 @MainActor
 struct ChapterListView: View {
-    let book: Book
+    private let record: LibraryBookRecord
+    private let book: Book
     @StateObject private var viewModel: ChapterListViewModel
 
-    init(book: Book) {
-        self.init(book: book, viewModel: ChapterListViewModel(book: book))
+    init(record: LibraryBookRecord) {
+        self.record = record
+        self.book = Book(id: record.id, title: record.title, coverURL: record.coverURL)
+        _viewModel = StateObject(wrappedValue: ChapterListViewModel(record: record))
     }
 
-    init(book: Book, viewModel: ChapterListViewModel) {
-        self.book = book
+    init(record: LibraryBookRecord, viewModel: ChapterListViewModel) {
+        self.record = record
+        self.book = Book(id: record.id, title: record.title, coverURL: record.coverURL)
         _viewModel = StateObject(wrappedValue: viewModel)
     }
 
@@ -555,9 +559,22 @@ private struct DownloadControl: View {
 }
 
 #Preview {
-    NavigationStack {
-        ChapterListView(
-            book: Book(id: "demo", title: "Demo Book", coverURL: nil)
-        )
+    let sampleChapter = LibraryChapterRecord(
+        id: "chapter0",
+        title: "chapter0",
+        audioAvailable: true,
+        subtitlesAvailable: true,
+        metrics: ChapterPlaybackMetrics(wordCount: 800, audioDurationSec: 480, wordsPerMinute: 100, speakingPaceKey: "slow")
+    )
+    let sampleRecord = LibraryBookRecord(
+        id: "demo",
+        title: "Demo Book",
+        coverURLString: nil,
+        addedAt: Date(),
+        lastSyncedAt: Date(),
+        chapters: [sampleChapter]
+    )
+    return NavigationStack {
+        ChapterListView(record: sampleRecord)
     }
 }
