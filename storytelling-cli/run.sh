@@ -18,8 +18,8 @@ fi
 # CLI 專案預設使用共享目錄，避免與 Server 衝突
 # 可透過環境變數覆寫
 WORKSPACE_ROOT="$(dirname "$REPO_ROOT")"
-export OUTPUT_ROOT="${OUTPUT_ROOT:-$WORKSPACE_ROOT/storytelling-output}"
-export DATA_ROOT="${DATA_ROOT:-$WORKSPACE_ROOT/storytelling-data}"
+export OUTPUT_ROOT="${OUTPUT_ROOT:-$WORKSPACE_ROOT/output}"
+export DATA_ROOT="${DATA_ROOT:-$WORKSPACE_ROOT/data}"
 export CONFIG_ROOT="${CONFIG_ROOT:-$REPO_ROOT}"
 
 # 確保必要目錄存在
@@ -40,9 +40,9 @@ if [ ! -x "$PYTHON_BIN" ]; then
     exit 1
 fi
 
-run_storytelling_cli() {
+run_cli() {
     set +e
-    "$PYTHON_BIN" -m storytelling_cli "$@"
+    "$PYTHON_BIN" -m cli "$@"
     local exit_code=$?
     set -e
 
@@ -82,7 +82,7 @@ manual_sync() {
 
 list_books() {
     "$PYTHON_BIN" - <<'PY'
-from storytelling_cli.__main__ import StorytellingCLI
+from cli.__main__ import StorytellingCLI
 
 cli = StorytellingCLI()
 books = cli.list_books()
@@ -185,9 +185,9 @@ import_gemini_dialogue() {
 if [ "$#" -gt 0 ]; then
     if [ "${1}" = "delete" ]; then
         shift
-        exec "$PYTHON_BIN" -m storytelling_cli delete "$@"
+        exec "$PYTHON_BIN" -m cli delete "$@"
     else
-        run_storytelling_cli "$@"
+        run_cli "$@"
         exit "$?"
     fi
 fi
@@ -205,7 +205,7 @@ while true; do
     echo
     case "$choice" in
         1)
-            run_storytelling_cli
+            run_cli
             ;;
         2)
             manage_books

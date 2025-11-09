@@ -14,13 +14,13 @@
 | 子專案 | 技術棧 | 角色 | 快速入口 |
 | --- | --- | --- | --- |
 | [storytelling-cli/](storytelling-cli/) | Python 3.12+, Gemini 2.5, MFA | 🏭 **CLI 內容生產工具** - 腳本/音訊/字幕生成 | [CLI README](storytelling-cli/README.md) |
-| [storytelling-backend/](storytelling-backend/) | Python 3.12+, FastAPI, GCS | 🌐 **REST API 服務** - 提供內容 API | [後端 README](storytelling-backend/README.md) |
+| [backend/](backend/) | Python 3.12+, FastAPI, GCS | 🌐 **REST API 服務** - 提供內容 API | [後端 README](backend/README.md) |
 | [audio-earning-ios/](audio-earning-ios/) | Swift 5.9+, SwiftUI, AVFoundation | 📱 **iOS 播放器** - 沉浸式學習體驗 | [前端 README](audio-earning-ios/README.md) |
 | [gemini-2-podcast/](gemini-2-podcast/) | Python, Gemini Multi-Speaker TTS | 🎙️ **對話式播客生成器** | [Podcast README](gemini-2-podcast/README.md) |
 
 **共享目錄：**
-- `storytelling-data/` - 書籍源文件、transcripts
-- `storytelling-output/` - 生成的播客內容（腳本、音訊、字幕）
+- `data/` - 書籍源文件、transcripts
+- `output/` - 生成的播客內容（腳本、音訊、字幕）
 
 ---
 
@@ -37,7 +37,7 @@ graph TB
         A1_3[Step 3: 生成字幕<br/>MFA 詞級對齊]
 
         A1 --> A1_1 --> A1_2 --> A1_3
-        OUTPUT[共享輸出目錄<br/>storytelling-output/<br/>podcast_script.txt<br/>podcast.mp3<br/>subtitles.srt<br/>metadata.json]
+        OUTPUT[共享輸出目錄<br/>output/<br/>podcast_script.txt<br/>podcast.mp3<br/>subtitles.srt<br/>metadata.json]
         A1_3 --> OUTPUT
         A2 --> OUTPUT
     end
@@ -47,7 +47,7 @@ graph TB
     end
 
     subgraph "API 服務層 (Render)"
-        B[FastAPI Server<br/>storytelling-backend/<br/>提供 REST API]
+        B[FastAPI Server<br/>backend/<br/>提供 REST API]
     end
 
     subgraph "前端消費層"
@@ -109,12 +109,12 @@ cp .env.example .env
 ./run.sh
 ```
 
-**產出位置：** `storytelling-output/<book>/<chapter>/`
+**產出位置：** `output/<book>/<chapter>/`
 
 ### 3. API 服務設置（選填）
 
 ```bash
-cd storytelling-backend
+cd backend
 
 # 創建虛擬環境（如果還沒有）
 python3 -m venv .venv
@@ -198,7 +198,7 @@ podcast-workspace/                 # Monorepo 根目錄
 │   ├── generate_script.py         # 腳本生成器
 │   ├── generate_audio.py          # 音頻生成器
 │   ├── generate_subtitles.py      # 字幕生成器
-│   ├── storytelling_cli/          # CLI 實現
+│   ├── cli/                       # CLI 實現（重命名自 storytelling_cli）
 │   ├── alignment/                 # MFA 對齊工具
 │   ├── scripts/                   # 輔助腳本
 │   ├── requirements/              # CLI 依賴
@@ -207,7 +207,7 @@ podcast-workspace/                 # Monorepo 根目錄
 │   │   └── core.txt              # 核心依賴
 │   └── README.md                  # CLI 文檔
 │
-├── storytelling-backend/          # FastAPI REST API 服務
+├── backend/                       # FastAPI REST API 服務（重命名自 storytelling-backend）
 │   ├── server/app/main.py         # FastAPI 應用
 │   ├── requirements/              # API 依賴
 │   │   └── server.txt            # 精簡的 API 依賴（不含 CLI 套件）
@@ -215,13 +215,13 @@ podcast-workspace/                 # Monorepo 根目錄
 │   ├── Dockerfile                 # API 部署映像（精簡版）
 │   └── docs/                      # 後端文檔
 │
-├── storytelling-data/             # 🆕 共享資料目錄
+├── data/                          # 🆕 共享資料目錄（重命名自 storytelling-data）
 │   ├── Foundation/                # 書籍章節源文件
 │   ├── Project Hail Mary/
 │   ├── Mistborn.../
 │   └── transcripts/               # 轉錄文本
 │
-├── storytelling-output/           # 🆕 共享輸出目錄
+├── output/                        # 🆕 共享輸出目錄（重命名自 storytelling-output）
 │   ├── Foundation/                # 生成的播客內容
 │   │   └── chapter0/
 │   │       ├── podcast_script.txt
@@ -251,7 +251,7 @@ podcast-workspace/                 # Monorepo 根目錄
 
 ## 🎓 核心功能
 
-### 🏭 內容生成（storytelling-backend）
+### 🏭 內容生成（storytelling-cli）
 
 - ✅ **AI 腳本生成** - Gemini 2.5 Pro 將書籍章節轉換為教學風格播客
 - ✅ **高品質 TTS** - Gemini Multi-Speaker TTS 生成自然流暢音頻
@@ -299,18 +299,18 @@ podcast-workspace/                 # Monorepo 根目錄
 ## 📖 文檔導航
 
 ### 新手入門
-- [後端安裝指南](storytelling-backend/docs/setup/installation.md)
-- [後端配置說明](storytelling-backend/docs/setup/configuration.md)
+- [後端安裝指南](backend/docs/setup/installation.md)
+- [後端配置說明](backend/docs/setup/configuration.md)
 - [iOS 快速開始](audio-earning-ios/QUICKSTART.md)
 
 ### 開發者
-- [系統架構](storytelling-backend/docs/development/architecture.md)
+- [系統架構](backend/docs/development/architecture.md)
 - [iOS 架構設計](audio-earning-ios/docs/architecture.md)
-- [API 參考文檔](storytelling-backend/docs/api/reference.md)
+- [API 參考文檔](backend/docs/api/reference.md)
 
 ### 運維人員
-- [Render 部署指南](storytelling-backend/DEPLOY_RENDER.md)
-- [故障排除](storytelling-backend/docs/operations/troubleshooting.md)
+- [Render 部署指南](backend/DEPLOY_RENDER.md)
+- [故障排除](backend/docs/operations/troubleshooting.md)
 
 ---
 
@@ -322,7 +322,7 @@ cd storytelling-cli
 ./run.sh                              # 互動式 CLI 生成播客
 
 # API：啟動服務
-cd storytelling-backend
+cd backend
 uvicorn server.app.main:app --reload --host 0.0.0.0 --port 8000
 
 # 部署：推送到 Render

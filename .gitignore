@@ -45,15 +45,14 @@ DerivedData/
 # ==========================================
 # Build Outputs
 # ==========================================
-output/
 dist/
 *.egg-info/
 
 # ==========================================
 # Shared Directories (Phase 2: CLI/Server Split)
 # ==========================================
-storytelling-data/
-storytelling-output/
+data/
+output/
 
 # ==========================================
 # MFA (Montreal Forced Aligner)

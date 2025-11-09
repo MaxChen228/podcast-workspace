@@ -13,10 +13,10 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Callable
 
 import yaml
-from storytelling_cli.status import ChapterStatus, natural_key, scan_chapters as status_scan_chapters
-from storytelling_cli.table import build_chapter_table
-from storytelling_cli.io import ConsoleIO
-from storytelling_cli.services.chapters import ChapterService
+from cli.status import ChapterStatus, natural_key, scan_chapters as status_scan_chapters
+from cli.table import build_chapter_table
+from cli.io import ConsoleIO
+from cli.services.chapters import ChapterService
 
 # ---------------------------------------------------------------------------
 # Constants & helpers

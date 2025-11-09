@@ -31,19 +31,19 @@ cp .env.example .env
 
 CLI 使用以下目錄結構（可透過環境變數覆寫）：
 
-- **DATA_ROOT** (預設: `../storytelling-data/`) - 書籍源文件
-- **OUTPUT_ROOT** (預設: `../storytelling-output/`) - 生成結果
+- **DATA_ROOT** (預設: `../data/`) - 書籍源文件
+- **OUTPUT_ROOT** (預設: `../output/`) - 生成結果
 - **CONFIG_ROOT** (預設: 當前目錄) - podcast_config.yaml 所在位置
 
 **首次使用時創建資料目錄：**
 
 ```bash
 # 創建共享資料目錄
-mkdir -p ../storytelling-data/foundation
-mkdir -p ../storytelling-output
+mkdir -p ../data/foundation
+mkdir -p ../output
 
 # 將書籍章節放入 data 目錄
-cp your_book_chapters.txt ../storytelling-data/foundation/
+cp your_book_chapters.txt ../data/foundation/
 ```
 
 ### 4. 執行 CLI
@@ -70,8 +70,8 @@ cp your_book_chapters.txt ../storytelling-data/foundation/
 
 | 變數 | 用途 | 預設值 |
 |------|------|--------|
-| `OUTPUT_ROOT` | 輸出目錄 | `../storytelling-output/` |
-| `DATA_ROOT` | 資料目錄 | `../storytelling-data/` |
+| `OUTPUT_ROOT` | 輸出目錄 | `../output/` |
+| `DATA_ROOT` | 資料目錄 | `../data/` |
 | `CONFIG_ROOT` | 配置目錄 | `.` (當前目錄) |
 | `GEMINI_API_KEY` | Gemini API 金鑰 | (必需) |
 | `GOOGLE_APPLICATION_CREDENTIALS` | GCS 服務帳號 JSON | (選填) |
@@ -80,8 +80,8 @@ cp your_book_chapters.txt ../storytelling-data/foundation/
 **使用自訂路徑範例：**
 
 ```bash
-export OUTPUT_ROOT=/mnt/shared/podcast-output
-export DATA_ROOT=/mnt/shared/podcast-data
+export OUTPUT_ROOT=/mnt/shared/output
+export DATA_ROOT=/mnt/shared/data
 ./run.sh
 ```
 
@@ -129,10 +129,10 @@ A: 使用範圍選擇，例如：
 
 ### Q: 生成的檔案在哪裡？
 
-A: 預設在 `../storytelling-output/<book>/<chapter>/` 目錄：
+A: 預設在 `../output/<book>/<chapter>/` 目錄：
 
 ```
-../storytelling-output/
+../output/
 └── foundation/
     └── chapter0/
         ├── podcast_script.txt
@@ -153,7 +153,7 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 
 ## 相關專案
 
-- [storytelling-backend](../storytelling-backend/) - FastAPI 服務（提供 API 供前端使用）
+- [backend](../backend/) - FastAPI 服務（提供 API 供前端使用）
 - [audio-earning-ios](../audio-earning-ios/) - iOS 播放器應用
 
 ## 許可證

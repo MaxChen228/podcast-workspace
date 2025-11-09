@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, List, Sequence
 
-from storytelling_cli.io import ConsoleIO
+from cli.io import ConsoleIO
 
 BatchWorker = Callable[[str], None]
 
