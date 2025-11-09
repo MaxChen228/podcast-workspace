@@ -22,7 +22,7 @@
 - 🗞️ 新聞牆（NewsData.io）：啟用後可在 App 內瀏覽分類新聞、全文搜尋並記錄互動事件。
 
 ## 文檔索引
-- [Architecture Summary](docs/architecture.md)：層級概覽、資料流、緩存策略。
+- [Architecture Summary](docs/architecture.md)：**架構視覺化（含 5 個 Mermaid 圖表）**、層級概覽、資料流、快取策略、依賴注入設計。
 - [Features Overview](docs/features.md)：主要功能對應的 View / ViewModel / 服務。
 - [API Quick Reference](docs/api.md)：App 使用的 HTTP 端點與 payload。
 - [Operations Guide](docs/operations.md)：環境設定、快取、備份與排障。
