@@ -37,10 +37,10 @@ class ServerSettings:
     gcs_mirror_include_suffixes: Optional[List[str]] = None
     signed_url_ttl_seconds: int = 600
     news_feature_enabled: bool = False
-    bing_news_endpoint: str = "https://api.bing.microsoft.com/v7.0/news"
-    bing_news_search_endpoint: str = "https://api.bing.microsoft.com/v7.0/news/search"
-    bing_news_api_key: Optional[str] = None
-    bing_news_market: str = "en-US"
+    newsdata_api_key: Optional[str] = None
+    newsdata_endpoint: str = "https://newsdata.io/api/1/latest"
+    newsdata_default_language: str = "en"
+    newsdata_default_country: Optional[str] = None
     news_category_whitelist: List[str] = field(default_factory=list)
     news_cache_ttl_seconds: int = 900
     news_default_count: int = 10
@@ -84,14 +84,11 @@ class ServerSettings:
         signed_url_ttl_seconds = max(60, int(os.getenv("SIGNED_URL_TTL_SECONDS", "600")))
 
         news_feature_enabled = os.getenv("NEWS_FEATURE_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
-        bing_news_endpoint = os.getenv("BING_NEWS_ENDPOINT", "https://api.bing.microsoft.com/v7.0/news").rstrip("/")
-        bing_news_search_endpoint = os.getenv(
-            "BING_NEWS_SEARCH_ENDPOINT",
-            f"{bing_news_endpoint}/search",
-        ).rstrip("/")
-        bing_news_api_key = os.getenv("BING_NEWS_KEY") or None
-        bing_news_market = os.getenv("BING_NEWS_MARKET", "en-US")
-        category_whitelist_raw = os.getenv("BING_NEWS_CATEGORY_WHITELIST", "")
+        newsdata_api_key = os.getenv("NEWSDATA_API_KEY") or None
+        newsdata_endpoint = os.getenv("NEWSDATA_ENDPOINT", "https://newsdata.io/api/1/latest").rstrip("/")
+        newsdata_default_language = os.getenv("NEWSDATA_DEFAULT_LANGUAGE", "en")
+        newsdata_default_country = os.getenv("NEWSDATA_DEFAULT_COUNTRY") or None
+        category_whitelist_raw = os.getenv("NEWS_CATEGORY_WHITELIST", "")
         news_category_whitelist = [item.strip().lower() for item in category_whitelist_raw.split(",") if item.strip()]
         news_cache_ttl_seconds = max(30, int(os.getenv("NEWS_CACHE_TTL_SECONDS", "900")))
         news_default_count = max(1, int(os.getenv("NEWS_DEFAULT_COUNT", "10")))
@@ -113,10 +110,10 @@ class ServerSettings:
             gcs_mirror_include_suffixes=include_suffixes,
             signed_url_ttl_seconds=signed_url_ttl_seconds,
             news_feature_enabled=news_feature_enabled,
-            bing_news_endpoint=bing_news_endpoint,
-            bing_news_search_endpoint=bing_news_search_endpoint,
-            bing_news_api_key=bing_news_api_key,
-            bing_news_market=bing_news_market,
+            newsdata_api_key=newsdata_api_key,
+            newsdata_endpoint=newsdata_endpoint,
+            newsdata_default_language=newsdata_default_language,
+            newsdata_default_country=newsdata_default_country,
             news_category_whitelist=news_category_whitelist,
             news_cache_ttl_seconds=news_cache_ttl_seconds,
             news_default_count=news_default_count,

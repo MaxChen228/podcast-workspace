@@ -1,4 +1,4 @@
-"""Integration with external news APIs (e.g., Bing News)."""
+"""Integration with external news APIs (e.g., NewsData.io)."""
 
 from __future__ import annotations
 
@@ -43,25 +43,25 @@ class _CacheEntry:
 
 
 class NewsService:
-    """Fetches curated news articles from Bing News Search API."""
+    """Fetches curated news articles from NewsData.io API."""
 
     def __init__(
         self,
         *,
-        headlines_endpoint: str,
-        search_endpoint: str,
+        endpoint: str,
         api_key: str,
-        default_market: str,
+        default_language: str,
+        default_country: Optional[str],
         allowed_categories: Optional[List[str]] = None,
         cache_ttl_seconds: int = 900,
         default_count: int = 10,
-        max_count: int = 25,
+        max_count: int = 10,
         http_timeout: float = 10.0,
     ) -> None:
-        self.headlines_endpoint = headlines_endpoint
-        self.search_endpoint = search_endpoint
+        self.endpoint = endpoint
         self.api_key = api_key
-        self.default_market = default_market
+        self.default_language = default_language
+        self.default_country = default_country
         self.allowed_categories = [c.lower() for c in allowed_categories or []]
         self.cache_ttl_seconds = cache_ttl_seconds
         self.default_count = default_count
@@ -74,13 +74,13 @@ class NewsService:
     def from_settings(cls, settings: ServerSettings) -> "NewsService":
         if not settings.news_feature_enabled:
             raise NewsConfigurationError("News feature is disabled")
-        if not settings.bing_news_api_key:
-            raise NewsConfigurationError("BING_NEWS_KEY must be set when NEWS_FEATURE_ENABLED=1")
+        if not settings.newsdata_api_key:
+            raise NewsConfigurationError("NEWSDATA_API_KEY must be set when NEWS_FEATURE_ENABLED=1")
         return cls(
-            headlines_endpoint=settings.bing_news_endpoint,
-            search_endpoint=settings.bing_news_search_endpoint,
-            api_key=settings.bing_news_api_key,
-            default_market=settings.bing_news_market,
+            endpoint=settings.newsdata_endpoint,
+            api_key=settings.newsdata_api_key,
+            default_language=settings.newsdata_default_language,
+            default_country=settings.newsdata_default_country,
             allowed_categories=settings.news_category_whitelist,
             cache_ttl_seconds=settings.news_cache_ttl_seconds,
             default_count=settings.news_default_count,
@@ -96,11 +96,12 @@ class NewsService:
         count: Optional[int],
     ) -> NewsFetchResult:
         normalized_category = self._normalize_category(category)
-        resolved_market = (market or self.default_market).strip() or self.default_market
+        resolved_language, resolved_country = self._parse_market(market)
         resolved_count = self._normalize_count(count)
         cache_key = self._cache_key("headlines", {
             "category": normalized_category or "",
-            "market": resolved_market,
+            "language": resolved_language,
+            "country": resolved_country or "",
             "count": resolved_count,
         })
 
@@ -115,21 +116,23 @@ class NewsService:
             )
 
         params: dict[str, Any] = {
-            "mkt": resolved_market,
-            "count": resolved_count,
-            "safeSearch": "Moderate",
-            "textFormat": "Raw",
+            "apikey": self.api_key,
+            "language": resolved_language,
+            "size": resolved_count,
         }
         if normalized_category:
             params["category"] = normalized_category
+        if resolved_country:
+            params["country"] = resolved_country
 
-        articles = await self._request_articles(self.headlines_endpoint, params)
-        await self._store_cache(cache_key, articles, normalized_category, resolved_market, resolved_count)
+        articles = await self._request_articles(self.endpoint, params)
+        market_display = f"{resolved_language}-{resolved_country.upper()}" if resolved_country else resolved_language
+        await self._store_cache(cache_key, articles, normalized_category, market_display, resolved_count)
 
         return NewsFetchResult(
             articles=articles,
             category=normalized_category,
-            market=resolved_market,
+            market=market_display,
             count=resolved_count,
             cached=False,
         )
@@ -144,11 +147,12 @@ class NewsService:
         query = (query or "").strip()
         if not query:
             raise NewsValidationError("Query cannot be empty")
-        resolved_market = (market or self.default_market).strip() or self.default_market
+        resolved_language, resolved_country = self._parse_market(market)
         resolved_count = self._normalize_count(count)
         cache_key = self._cache_key("search", {
             "q": query.lower(),
-            "market": resolved_market,
+            "language": resolved_language,
+            "country": resolved_country or "",
             "count": resolved_count,
         })
 
@@ -163,23 +167,38 @@ class NewsService:
             )
 
         params: dict[str, Any] = {
+            "apikey": self.api_key,
             "q": query,
-            "mkt": resolved_market,
-            "count": resolved_count,
-            "textFormat": "Raw",
-            "safeSearch": "Moderate",
+            "language": resolved_language,
+            "size": resolved_count,
         }
+        if resolved_country:
+            params["country"] = resolved_country
 
-        articles = await self._request_articles(self.search_endpoint, params)
-        await self._store_cache(cache_key, articles, None, resolved_market, resolved_count)
+        articles = await self._request_articles(self.endpoint, params)
+        market_display = f"{resolved_language}-{resolved_country.upper()}" if resolved_country else resolved_language
+        await self._store_cache(cache_key, articles, None, market_display, resolved_count)
 
         return NewsFetchResult(
             articles=articles,
             category=None,
-            market=resolved_market,
+            market=market_display,
             count=resolved_count,
             cached=False,
         )
+
+    def _parse_market(self, market: Optional[str]) -> tuple[str, Optional[str]]:
+        """Parse market parameter (e.g., 'en-US') into language and country."""
+        if not market or not market.strip():
+            return self.default_language, self.default_country
+
+        market = market.strip()
+        if "-" in market:
+            parts = market.split("-", 1)
+            language = parts[0].lower()
+            country = parts[1].lower() if len(parts) > 1 else None
+            return language, country
+        return market.lower(), self.default_country
 
     def _normalize_category(self, category: Optional[str]) -> Optional[str]:
         if not category:
@@ -229,15 +248,14 @@ class NewsService:
             self._cache[key] = entry
 
     async def _request_articles(self, url: str, params: Dict[str, Any]) -> List[NewsArticle]:
-        headers = {"Ocp-Apim-Subscription-Key": self.api_key}
         try:
             async with httpx.AsyncClient(timeout=self.http_timeout) as client:
-                response = await client.get(url, params=params, headers=headers)
+                response = await client.get(url, params=params)
         except httpx.HTTPError as exc:
             raise NewsAPIError(f"Failed to contact news API: {exc}") from exc
 
-        if response.status_code == 401:
-            raise NewsAPIError("Invalid Bing News API key")
+        if response.status_code == 401 or response.status_code == 403:
+            raise NewsAPIError("Invalid NewsData.io API key")
         if response.status_code == 429:
             raise NewsAPIError("News API rate limit exceeded")
         if response.status_code >= 500:
@@ -246,28 +264,28 @@ class NewsService:
             raise NewsValidationError("News API rejected the request")
 
         payload = response.json()
-        value = payload.get("value") or []
-        articles = [self._to_article(item) for item in value if item]
+        results = payload.get("results") or []
+        articles = [self._to_article(item) for item in results if item]
         return articles
 
     def _to_article(self, item: Dict[str, Any]) -> NewsArticle:
-        url = item.get("url") or ""
-        raw_id = url or item.get("name") or item.get("description") or str(hash(item))
+        url = item.get("link") or ""
+        raw_id = url or item.get("title") or item.get("description") or str(hash(item))
         article_id = hashlib.sha1(raw_id.encode("utf-8")).hexdigest()[:24]
-        provider_block = (item.get("provider") or [{}])[0]
-        image_block = item.get("image") or {}
-        thumbnail = image_block.get("thumbnail") or {}
-        image_url = thumbnail.get("contentUrl") or image_block.get("contentUrl")
+        image_url = item.get("image_url")
+        provider_name = item.get("source_name") or item.get("source_id")
+        category_list = item.get("category") or []
+        category = category_list[0] if isinstance(category_list, list) and category_list else None
         return NewsArticle(
             id=article_id,
-            title=item.get("name", ""),
+            title=item.get("title", ""),
             summary=item.get("description"),
             url=url,
             image_url=image_url,
-            category=item.get("category"),
-            provider_name=provider_block.get("name"),
-            published_at=item.get("datePublished"),
-            source="bing-news",
+            category=category,
+            provider_name=provider_name,
+            published_at=item.get("pubDate"),
+            source="newsdata-io",
         )
 
     def _cache_key(self, prefix: str, params: Dict[str, Any]) -> str:

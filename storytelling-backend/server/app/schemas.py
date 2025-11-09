@@ -96,7 +96,7 @@ class NewsArticle(BaseModel):
     category: Optional[str] = None
     provider_name: Optional[str] = None
     published_at: Optional[str] = None
-    source: str = "bing-news"
+    source: str = "newsdata-io"
 
 
 class NewsHeadlineResponse(BaseModel):

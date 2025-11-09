@@ -43,7 +43,7 @@ uvicorn server.app.main:app --host 0.0.0.0 --port 8000 --workers 4
 | `GET` | `/books/{book_id}/chapters/{chapter_id}` | 獲取章節詳情 |
 | `GET` | `/books/{book_id}/chapters/{chapter_id}/audio` | 下載音頻 |
 | `GET` | `/books/{book_id}/chapters/{chapter_id}/subtitles` | 下載字幕 |
-| `GET` | `/news/headlines` | 取得 Bing 分類新聞（需啟用 NEWS_FEATURE）|
+| `GET` | `/news/headlines` | 取得 NewsData.io 分類新聞（需啟用 NEWS_FEATURE）|
 | `GET` | `/news/search` | 搜尋最新新聞 |
 | `POST` | `/news/events` | 回報新聞點擊/分享行為 |
 
@@ -475,7 +475,7 @@ curl -H "Authorization: Bearer your_token" \
 
 ### 新聞：分類頭條 `/news/headlines`
 
-啟用 `NEWS_FEATURE_ENABLED=1` 並設定 `BING_NEWS_KEY` 後，可直接借用 Bing News Search API 顯示高品質新聞。
+啟用 `NEWS_FEATURE_ENABLED=1` 並設定 `NEWSDATA_API_KEY` 後，即可透過 NewsData.io 取得即時新聞。
 
 ```http
 GET /news/headlines?category=technology&count=5&market=en-US
@@ -483,9 +483,9 @@ GET /news/headlines?category=technology&count=5&market=en-US
 
 | 參數 | 類型 | 必需 | 描述 |
 |------|------|------|------|
-| `category` | string | 否 | Bing 官方分類名稱（`technology`, `business`, `entertainment`...）。若環境變數設定白名單，超出清單將回傳 400。|
-| `market` | string | 否 | 地區語系，預設 `BING_NEWS_MARKET`。|
-| `count` | integer | 否 | 單次回傳文章數，介於 1 ～ `NEWS_MAX_COUNT`。|
+| `category` | string | 否 | 分類名稱（`technology`, `business`, `sports`, `entertainment`, `science`, `health`, 等）。若環境變數設定白名單，超出清單將回傳 400。|
+| `market` | string | 否 | 地區語系（如 `en-US`、`zh-TW`），會被拆分為 language 和 country 參數。預設 `NEWSDATA_DEFAULT_LANGUAGE`。|
+| `count` | integer | 否 | 單次回傳文章數，介於 1 ～ `NEWS_MAX_COUNT`（免費層最多 10）。|
 
 **示例回應**
 
@@ -500,11 +500,11 @@ GET /news/headlines?category=technology&count=5&market=en-US
       "id": "4d6ef13c9a7a6c3c4e61d9f7",
       "title": "Apple introduces new Swift features",
       "summary": "WWDC recap...",
-      "url": "https://www.bing.com/...",
+      "url": "https://www.theverge.com/...",
       "image_url": "https://.../thumb.jpg",
       "provider_name": "The Verge",
       "published_at": "2025-11-05T08:00:00Z",
-      "source": "bing-news"
+      "source": "newsdata-io"
     }
   ]
 }
@@ -515,7 +515,7 @@ GET /news/headlines?category=technology&count=5&market=en-US
 | 狀態碼 | 描述 |
 |--------|------|
 | `400` | 參數無效（分類不允許或 count < 1）|
-| `502` | Bing API 回覆錯誤或被速率限制 |
+| `502` | NewsData.io API 回覆錯誤或被速率限制 |
 | `503` | NEWS 功能未啟用或服務初始化失敗 |
 
 ---

@@ -75,9 +75,10 @@ git push origin main
    | Key | Value |
    |-----|-------|
    | `GEMINI_API_KEY` | `your_actual_gemini_api_key` |
-   | `NEWS_FEATURE_ENABLED` | `1`（若要啟用 Bing 新聞牆，可選） |
-   | `BING_NEWS_KEY` | `your_bing_news_api_key`（僅在上列啟用時必填） |
-   | `BING_NEWS_MARKET` | `en-US`（可依產品語系調整） |
+   | `NEWS_FEATURE_ENABLED` | `1`（若要啟用 NewsData.io 新聞牆，可選） |
+   | `NEWSDATA_API_KEY` | `your_newsdata_io_api_key`（僅在上列啟用時必填） |
+   | `NEWSDATA_DEFAULT_LANGUAGE` | `en`（預設語言，可選） |
+   | `NEWSDATA_DEFAULT_COUNTRY` | `us`（預設國家，可選） |
 
 4. 點選 **"Save Changes"**
 

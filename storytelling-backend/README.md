@@ -196,25 +196,28 @@ uvicorn server.app.main:app --reload --host 0.0.0.0 --port 8000
 - `GET /books/{book_id}/chapters/{chapter_id}` - 章節詳情
 - `GET /books/{book_id}/chapters/{chapter_id}/audio` - 音頻串流或簽名 URL
 - `GET /books/{book_id}/chapters/{chapter_id}/subtitles` - 字幕下載或簽名 URL
-- `GET /news/headlines` - 透過 Bing News 聚合分類新聞
-- `GET /news/search` - 透過 Bing News 搜尋最新文章
+- `GET /news/headlines` - 透過 NewsData.io 聚合分類新聞
+- `GET /news/search` - 透過 NewsData.io 搜尋最新文章
 - `POST /news/events` - 回報使用者點擊／互動事件
 
 👉 **[查看完整 API 文檔](docs/api/reference.md)**
 
-## 新聞整合（Bing News Search API）
+## 新聞整合（NewsData.io API）
 
 | 設定 | 說明 |
 |------|------|
 | `NEWS_FEATURE_ENABLED` | 設為 `1`/`true` 後啟用 `/news/*` 端點 |
-| `BING_NEWS_KEY` | 必填，Azure/Bing News Search API Key |
-| `BING_NEWS_MARKET` | 預設 `en-US`，可依使用者在 iOS 端切換 |
-| `BING_NEWS_CATEGORY_WHITELIST` | 逗號分隔（如 `technology,business`）；留空則允許全部官方分類 |
+| `NEWSDATA_API_KEY` | 必填，NewsData.io API Key（免費層 200 credits/天） |
+| `NEWSDATA_DEFAULT_LANGUAGE` | 預設 `en`，支援 80+ 種語言 |
+| `NEWSDATA_DEFAULT_COUNTRY` | 選填，如 `us`、`gb`、`tw` 等，用於篩選地區新聞 |
+| `NEWS_CATEGORY_WHITELIST` | 逗號分隔（如 `technology,business`）；留空則允許全部分類 |
 | `NEWS_CACHE_TTL_SECONDS` | 伺服器端快取 TTL，預設 900 秒，避免觸發 API 限額 |
-| `NEWS_DEFAULT_COUNT` / `NEWS_MAX_COUNT` | 控制每次拉取的文章數量 |
+| `NEWS_DEFAULT_COUNT` / `NEWS_MAX_COUNT` | 控制每次拉取的文章數量（免費層最多 10 篇/次） |
 | `NEWS_EVENTS_DIR` | 用於存儲 `POST /news/events` 的 JSONL，預設 `logs/news_events` |
 
-> 建議在 Render Dashboard 內為上述環境變數建立 Secret，並在 iOS 端用 Remote Config 控制是否展示新聞分頁。
+**支援的分類：** business, entertainment, environment, food, health, politics, science, sports, technology, top, world
+
+> 建議在 Render Dashboard 內為上述環境變數建立 Secret，並在 iOS 端用 Remote Config 控制是否展示新聞分頁。註冊 NewsData.io 帳號即可免費使用，每天 200 credits（約 2000 篇文章）。
 
 > 🔐 若將後端部署到雲端平台（如 Render），建議設定 `MEDIA_DELIVERY_MODE=gcs-signed`，並搭配 `GCS_MIRROR_INCLUDE_SUFFIXES=.json` 與 `SIGNED_URL_TTL_SECONDS`，音檔/字幕會透過簽名 URL 直接由 GCS 下載，冷啟動更快也能節省記憶體。
 
