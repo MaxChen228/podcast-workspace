@@ -150,9 +150,12 @@ sequenceDiagram
 
     Note over iOS: 使用者操作
     iOS->>API: GET /books
-    iOS->>API: GET /audio
-    API-->>iOS: 307 轉址到 GCS
-    iOS->>G: 直接下載音訊
+    iOS->>API: GET /books/{book}/chapters
+    iOS->>API: GET /books/{book}/chapters/{chapter}
+    API-->>iOS: ChapterPlayback(JSON，含 audio_url/subtitles_url)
+    iOS->>API: GET /books/{book}/chapters/{chapter}/audio
+    API-->>iOS: 200 streaming 或 307 → GCS（依 media_delivery_mode）
+    iOS->>G: 若被轉址則直接下載音訊/字幕
 
     Note over iOS: 離線使用
     iOS->>iOS: 快取播放

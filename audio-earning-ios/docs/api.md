@@ -8,7 +8,7 @@
 | 書籍列表 | `GET /books` | `APIService.fetchBooks`, `BookListViewModel` | 回傳 `BookResponse` 陣列；ViewModel 會正規化封面 URL (`APIService.normalizedMediaURL`)。 |
 | 章節列表 | `GET /books/{bookId}/chapters` | `APIService.fetchChapters`, `ChapterListViewModel` | 回傳 `ChapterResponse`；被寫入 `ChapterListCacheStore`，TTL 6h。 |
 | 章節詳情/播放 | `GET /books/{bookId}/chapters/{chapterId}` | `APIService.fetchChapterDetail`, `ChapterPlayerViewModel` | 取得實際音訊/字幕 URL、播放指標，配合 `ChapterCacheStore` 緩存。 |
-| 翻譯句子 | `POST /translations` | `APIService.translateSentence`, `ChapterPlayerViewModel` | JSON payload 包含 text、語言代碼與上下文 (book/chapter/subtitleId)；回應 `TranslationResponsePayload`，含 `cached` 標記。 |
+| 翻譯句子 | `POST /translations` | `APIService.translateSentence`, `ChapterPlayerViewModel` | JSON payload 包含 text、語言代碼與上下文 (book/chapter/subtitleId)；回應 `TranslationResponsePayload`，含 `cached` 標記。**注意：當前 `storytelling-backend` 尚未提供此端點，若要在 App 內啟用翻譯功能，必須自行擴充後端或串接外部翻譯服務。** |
 | 句子解釋 | `POST /explain/sentence` | `APIService.explainSentence`, `SentenceDetailView` | 需要前後句上下文；回傳重點/詞彙/中譯。 |
 | 片語解釋 | `POST /explain/phrase` | `APIService.explainPhrase` | 類似句子解釋，但 payload 为 phrase + sentence context。 |
 | 下載音訊 | 原始 URL（可能為 `/audio/...` 或 `gs://`) | `APIService.downloadAudio` | 先解析 307/`gs://` 轉成 HTTPS，再下載到 `temporary/audio-cache`，儲存 ETag 供 `clearMediaCache()` 計數。 |

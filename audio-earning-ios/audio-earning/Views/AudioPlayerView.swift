@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// Main audio player view integrating waveform, subtitles, and playback controls.
+/// Main audio player view integrating subtitles and playback controls.
 @MainActor
 struct AudioPlayerView: View {
     @StateObject private var viewModel: AudioPlayerViewModel

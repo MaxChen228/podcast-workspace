@@ -11,7 +11,7 @@
 1. `git clone <repo>` 並進入資料夾。
 2. `open audio-earning.xcodeproj` 於 Xcode 15 以上開啟。
 3. 選擇模擬器或實機，按下 ▶️ 執行。
-4. 第一次啟動若找不到後端，請在「書籍」分頁 → 左上角 **Server Settings** 新增或選擇端點；內建值來源為 Info.plist (`API_BASE_URL*`)。
+4. 第一次啟動若找不到後端，請在「書籍」分頁 → 左上角 **Server Settings** 新增或選擇端點；預設的 Production / Local Development URL 由 `BackendConfigurationStore` 寫死並存於 `UserDefaults`，與 Info.plist 無關，可自行新增環境。
 
 ## 核心功能
 - 📚 書籍 / 章節瀏覽：支援離線快照、批次下載、快取 TTL 6 小時。

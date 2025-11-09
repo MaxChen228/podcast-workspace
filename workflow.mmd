@@ -20,23 +20,31 @@ sequenceDiagram
 
     Note over iOS: 使用者操作
     iOS->>API: GET /books
-    API-->>iOS: 返回書籍列表 JSON
+    API-->>iOS: 書籍列表 JSON
 
-    iOS->>API: GET /books/{id}/chapters/{id}
-    API-->>iOS: 返回章節詳情 + URL
+    iOS->>API: GET /books/{book}/chapters
+    API-->>iOS: 章節列表 (含 audio_available/subtitles_available)
 
-    iOS->>API: GET /audio
-    API-->>iOS: 307 轉址到 GCS 公開 URL
+    iOS->>API: GET /books/{book}/chapters/{chapter}
+    API-->>iOS: ChapterPlayback JSON<br/>audio_url + subtitles_url
 
-    iOS->>G: 直接下載音訊
-    G-->>iOS: 音訊串流
+    iOS->>API: GET /books/{book}/chapters/{chapter}/audio
+    alt local mode
+        API-->>iOS: 200 Streaming (Range 支援)
+    else gcs-public / gcs-signed
+        API-->>iOS: 307 轉址到 GCS/Signed URL
+        iOS->>G: 下載音訊
+        G-->>iOS: 音訊串流
+    end
 
-    iOS->>API: GET /subtitles
-    API-->>iOS: 307 轉址到 GCS 公開 URL
-
-    iOS->>G: 直接下載字幕
-    G-->>iOS: SRT 文件
+    iOS->>API: GET /books/{book}/chapters/{chapter}/subtitles
+    alt local mode
+        API-->>iOS: 200 SRT 內容
+    else gcs-public / gcs-signed
+        API-->>iOS: 307 轉址到 GCS/Signed URL
+        iOS->>G: 下載字幕
+        G-->>iOS: SRT 文件
+    end
 
     Note over iOS: 離線使用
     iOS->>iOS: 快取音訊+字幕<br/>本地播放
-
