@@ -158,8 +158,6 @@ sequenceDiagram
     iOS->>iOS: 快取播放
 ```
 
----
-
 ## 📁 專案結構
 
 ```
