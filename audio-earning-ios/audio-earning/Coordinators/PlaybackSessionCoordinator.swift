@@ -310,7 +310,9 @@ final class PlaybackSessionCoordinator: PlaybackSessionCoordinating {
     private func startTimer() {
         stopTimer()
         let timer = Timer(timeInterval: timerInterval, repeats: true) { [weak self] _ in
-            self?.handleTimerTick()
+            Task { @MainActor [weak self] in
+                self?.handleTimerTick()
+            }
         }
         self.timer = timer
         RunLoop.main.add(timer, forMode: .common)

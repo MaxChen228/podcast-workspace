@@ -121,7 +121,9 @@ final class BackendConfigurationViewModel: ObservableObject {
         refreshEndpoints()
 
         backendObserver = NotificationCenter.default.addObserver(forName: .backendConfigurationDidChange, object: nil, queue: .main) { [weak self] _ in
-            self?.refreshEndpoints()
+            Task { @MainActor [weak self] in
+                self?.refreshEndpoints()
+            }
         }
     }
 

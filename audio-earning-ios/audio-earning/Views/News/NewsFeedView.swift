@@ -41,7 +41,7 @@ struct NewsFeedView: View {
         .onSubmit(of: .search) {
             viewModel.submitSearch()
         }
-        .onChange(of: viewModel.searchText) { newValue in
+        .onChange(of: viewModel.searchText) { _, newValue in
             if newValue.isEmpty {
                 viewModel.clearSearch()
             }

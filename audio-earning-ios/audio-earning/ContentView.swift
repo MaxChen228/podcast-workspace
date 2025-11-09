@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+@MainActor
 struct ContentView: View {
     @Environment(\.dependencies) private var dependencies
     @StateObject private var tabRouter = TabRouter()
