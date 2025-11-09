@@ -18,10 +18,10 @@ RUN apt-get update \
 WORKDIR /app
 
 # 提前複製依賴檔，讓 Docker layer cache 能在程式碼變動時重用已安裝的套件
-COPY requirements/ ./requirements/
-COPY requirements.txt ./
+# Phase 1: 只複製 server.txt，不再安裝 CLI 相關依賴
+COPY requirements/server.txt ./requirements/server.txt
 
-# 安裝伺服器所需依賴
+# 安裝伺服器所需依賴（不含 LLM/TTS 等 CLI 套件）
 RUN pip install --no-cache-dir -r requirements/server.txt
 
 # 複製伺服器程式碼以及需要的資源

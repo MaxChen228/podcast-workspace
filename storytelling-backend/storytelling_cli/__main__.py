@@ -50,7 +50,13 @@ COLOR_CODES = {
 
 MODULE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = MODULE_DIR.parent
-CONFIG_PATH = REPO_ROOT / "podcast_config.yaml"
+
+# Phase 1: 支援透過環境變數覆寫配置路徑
+_config_root_env = os.getenv("CONFIG_ROOT")
+if _config_root_env:
+    CONFIG_PATH = Path(_config_root_env).expanduser().resolve() / "podcast_config.yaml"
+else:
+    CONFIG_PATH = REPO_ROOT / "podcast_config.yaml"
 
 SCRIPT_BATCH_SIZE_DEFAULT = int(os.environ.get("PODCAST_SCRIPT_BATCH_SIZE", "10") or "10")
 SCRIPT_BATCH_DELAY_DEFAULT = int(os.environ.get("PODCAST_SCRIPT_BATCH_DELAY", "10") or "10")
@@ -236,9 +242,23 @@ class StorytellingCLI:
         config_dir = CONFIG_PATH.parent
         cfg = self._load_config()
         paths_cfg = cfg.get("paths", {}) if isinstance(cfg, dict) else {}
-        books_root = resolve_path(config_dir, paths_cfg.get("books_root", "./data"))
-        outputs_root = resolve_path(config_dir, paths_cfg.get("outputs_root", "./output"))
-        transcripts_root = resolve_path(config_dir, paths_cfg.get("transcripts_root", "./data/transcripts"))
+
+        # Phase 1: 優先使用環境變數，未設定時 fallback 至 config 檔案
+        output_root_env = os.getenv("OUTPUT_ROOT")
+        data_root_env = os.getenv("DATA_ROOT")
+
+        if output_root_env:
+            outputs_root = Path(output_root_env).expanduser().resolve()
+        else:
+            outputs_root = resolve_path(config_dir, paths_cfg.get("outputs_root", "./output"))
+
+        if data_root_env:
+            books_root = Path(data_root_env).expanduser().resolve()
+            transcripts_root = Path(data_root_env).expanduser().resolve() / "transcripts"
+        else:
+            books_root = resolve_path(config_dir, paths_cfg.get("books_root", "./data"))
+            transcripts_root = resolve_path(config_dir, paths_cfg.get("transcripts_root", "./data/transcripts"))
+
         return Paths(
             repo_root=REPO_ROOT,
             config_path=CONFIG_PATH,

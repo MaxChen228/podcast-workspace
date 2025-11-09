@@ -71,6 +71,39 @@ graph LR
    會將音訊與腳本複製到 `output/<book>/<chapter>/` 並建立 metadata。
 3. 啟動 `uvicorn` 後，前端可透過既有 `/books/{book}/chapters/{chapter}` API 播放該章節；若需要字幕，再把匯入後的腳本 + 音訊丟進原本的字幕對齊流程即可。
 
+## 環境變數配置（Phase 1: CLI/Server 拆分支援）
+
+系統現已支援透過環境變數覆寫預設路徑，方便 CLI 與 API 服務的獨立部署：
+
+| 環境變數 | 用途 | 預設值 |
+|---------|------|--------|
+| `OUTPUT_ROOT` | 輸出目錄（生成的音訊、字幕等） | `./output` |
+| `DATA_ROOT` | 數據目錄（books、transcripts 等） | `./data` |
+| `CONFIG_ROOT` | 配置檔案目錄（podcast_config.yaml 所在位置） | 專案根目錄 |
+
+**使用範例：**
+
+```bash
+# 使用自訂輸出目錄
+export OUTPUT_ROOT=/mnt/shared/podcast-output
+export DATA_ROOT=/mnt/shared/podcast-data
+./run.sh
+
+# API 服務讀取相同路徑
+export OUTPUT_ROOT=/mnt/shared/podcast-output
+uvicorn server.app.main:app
+```
+
+**依賴分離：**
+
+為了降低 Docker 映像大小與建置時間，我們將依賴分為兩類：
+- `requirements/cli.txt` - CLI 生產工具依賴（LLM、TTS、音訊處理等）
+- `requirements/server.txt` - API 服務依賴（FastAPI、GCS、Gemini API）
+
+這使得 API 部署不再需要安裝大量 CLI 相關套件，大幅減少映像大小。
+
+👉 詳細配置說明請參考 [`.env.example`](.env.example) 與 [配置文檔](docs/setup/configuration.md)
+
 ## 文檔導航
 
 ### 📚 按角色查找

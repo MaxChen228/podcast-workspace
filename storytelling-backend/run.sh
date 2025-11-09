@@ -14,10 +14,20 @@ if [ -z "${STORYTELLING_SKIP_DOTENV:-}" ] && [ -f "$DOTENV_PATH" ]; then
     set +a
 fi
 
+# === Phase 1: 路徑環境變數支援 ===
+# 允許透過環境變數覆寫預設路徑，未設定時 fallback 至預設值
+export OUTPUT_ROOT="${OUTPUT_ROOT:-$REPO_ROOT/output}"
+export DATA_ROOT="${DATA_ROOT:-$REPO_ROOT/data}"
+export CONFIG_ROOT="${CONFIG_ROOT:-$REPO_ROOT}"
+
+# 確保必要目錄存在
+mkdir -p "$OUTPUT_ROOT" "$DATA_ROOT"
+
+# === 原有變數 ===
 DEFAULT_VENV="$REPO_ROOT/.venv"
 VENV_PATH="${PODCAST_ENV_PATH:-$DEFAULT_VENV}"
 PYTHON_BIN="$VENV_PATH/bin/python"
-OUTPUT_DIR="$REPO_ROOT/output"
+OUTPUT_DIR="$OUTPUT_ROOT"  # 使用新的環境變數
 SYNC_BUCKET="${STORYTELLING_SYNC_BUCKET:-${GCS_SYNC_BUCKET:-}}"
 DEFAULT_SYNC_EXCLUDE='(^|/)\\.DS_Store$|(^|/)\\.gitignore$|(^|/)\\.env$|(^|/)\\.pytest_cache($|/.*)|.*\\.wav$'
 SYNC_EXCLUDE_REGEX="${STORYTELLING_SYNC_EXCLUDE_REGEX:-$DEFAULT_SYNC_EXCLUDE}"
