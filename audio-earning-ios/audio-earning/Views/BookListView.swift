@@ -16,10 +16,6 @@ struct BookListView: View {
     @State private var cacheResultTitle = ""
     @State private var cacheResultMessage = ""
 
-    init() {
-        self.init(viewModel: BookListViewModel())
-    }
-
     init(viewModel: BookListViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
     }
@@ -205,11 +201,6 @@ struct BookListView: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        BookListView()
-    }
-}
 
 struct BackendConfigurationView: View {
     @StateObject private var viewModel: BackendConfigurationViewModel
@@ -223,7 +214,7 @@ struct BackendConfigurationView: View {
     @State private var pendingDeletion: BackendEndpoint?
     @FocusState private var editorFocusedField: Field?
 
-    init(viewModel: BackendConfigurationViewModel = BackendConfigurationViewModel()) {
+    init(viewModel: BackendConfigurationViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
     }
 
@@ -551,7 +542,8 @@ struct BackendConfigurationView: View {
     }
 }
 
-struct BookCoverThumbnail: View {
+
+private struct BookCoverThumbnail: View {
     let url: URL?
 
     private static let placeholderGradient = LinearGradient(
