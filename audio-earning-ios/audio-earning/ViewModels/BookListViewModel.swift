@@ -188,24 +188,6 @@ final class BackendConfigurationViewModel: ObservableObject {
         }
     }
 
-<<<<<<< HEAD
-    private func handleBackendChange() {
-        refreshEndpoints()
-        reloadAfterBackendChange()
-    }
-
-    private func handleLibraryChange() {
-        hasLoaded = false
-        loadBooks(force: true)
-    }
-
-    private func reloadAfterBackendChange() {
-        hasLoaded = false
-        loadBooks(force: true)
-    }
-
-=======
->>>>>>> 2c4360b (feat: 設定頁提供伺服器設定入口)
     private func refreshEndpoints() {
         endpoints = backendStore.endpoints
         selectedEndpointID = backendStore.currentEndpoint.id
@@ -228,18 +210,5 @@ final class BackendConfigurationViewModel: ObservableObject {
         string
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             .lowercased()
-    }
-
-    func deleteBooks(at offsets: IndexSet) {
-        let ids = offsets.map { books[$0].id }
-        Task {
-            for id in ids {
-                await libraryManager.removeBookFromLibrary(bookID: id)
-            }
-        }
-    }
-
-    func record(for bookID: String) -> LibraryBookRecord? {
-        libraryRecords.first { $0.id == bookID }
     }
 }

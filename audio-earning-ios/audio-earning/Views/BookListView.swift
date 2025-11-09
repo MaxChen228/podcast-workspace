@@ -468,7 +468,7 @@ struct BackendConfigurationView: View {
     }
 }
 
-private struct BookCoverThumbnail: View {
+struct BookCoverThumbnail: View {
     let url: URL?
 
     private static let placeholderGradient = LinearGradient(
