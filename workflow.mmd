@@ -1,0 +1,42 @@
+sequenceDiagram
+    autonumber
+
+    participant P as 生產機<br/>(本地)
+    participant L as 本地檔案<br/>output/
+    participant G as GCS Bucket<br/>storytelling-output
+    participant API as FastAPI<br/>(Cloud Run)
+    participant iOS as iOS App<br/>(使用者)
+
+    Note over P: 內容生成階段
+    P->>P: ./run.sh 執行<br/>腳本→音訊→字幕
+    P->>L: 寫入 output/<book>/<chapter>/
+
+    Note over P,G: 部署前同步
+    P->>G: ./scripts/sync_output.sh<br/>上傳 .json + .mp3 + .srt
+
+    Note over API: 後端冷啟動
+    API->>G: GCSMirror.sync()<br/>僅下載 .json metadata
+    API->>API: OutputDataCache<br/>解析並建立索引
+
+    Note over iOS: 使用者操作
+    iOS->>API: GET /books
+    API-->>iOS: 返回書籍列表 JSON
+
+    iOS->>API: GET /books/{id}/chapters/{id}
+    API-->>iOS: 返回章節詳情 + URL
+
+    iOS->>API: GET /audio
+    API-->>iOS: 307 轉址到 GCS 公開 URL
+
+    iOS->>G: 直接下載音訊
+    G-->>iOS: 音訊串流
+
+    iOS->>API: GET /subtitles
+    API-->>iOS: 307 轉址到 GCS 公開 URL
+
+    iOS->>G: 直接下載字幕
+    G-->>iOS: SRT 文件
+
+    Note over iOS: 離線使用
+    iOS->>iOS: 快取音訊+字幕<br/>本地播放
+

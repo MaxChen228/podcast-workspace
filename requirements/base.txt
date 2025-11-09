@@ -1,0 +1,10 @@
+# Podcastfy core modules for script generation + content extraction
+podcastfy>=0.4.0
+PyYAML>=6.0
+python-dotenv>=1.0.0
+
+# Input extraction helpers
+pypdf>=3.17.0
+beautifulsoup4>=4.12.0
+youtube-transcript-api>=0.6.0
+yt-dlp>=2024.8.1

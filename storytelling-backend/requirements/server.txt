@@ -1,0 +1,16 @@
+# FastAPI Backend Dependencies
+# Include base requirements
+-r base.txt
+
+# Web Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# Additional Backend Tools
+python-multipart>=0.0.9
+
+# Cloud storage
+google-cloud-storage>=2.16.0
+
+# Gemini APIs for sentence explanations
+google-genai>=1.2.0
