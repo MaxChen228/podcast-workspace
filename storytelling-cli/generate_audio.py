@@ -19,9 +19,15 @@ from google import genai
 from google.genai import types
 from pydub import AudioSegment
 
-from cli_output import basic_config_rows, print_config_table, print_footer, print_header, print_section
+from cli.output_utils import (
+    basic_config_rows,
+    print_config_table,
+    print_footer,
+    print_header,
+    print_section,
+)
 from alignment.mfa import MfaAlignmentError, MfaConfig, align_chapter_with_mfa, build_config_from_dict
-from voice_utils import choose_narrator_voice
+from cli.voice_utils import choose_narrator_voice
 
 load_dotenv()
 

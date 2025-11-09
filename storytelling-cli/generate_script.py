@@ -18,8 +18,14 @@ import yaml
 from dotenv import load_dotenv
 from podcastfy.client import generate_podcast
 
-from cli_output import basic_config_rows, print_config_table, print_footer, print_header, print_section
-from voice_utils import choose_narrator_voice
+from cli.output_utils import (
+    basic_config_rows,
+    print_config_table,
+    print_footer,
+    print_header,
+    print_section,
+)
+from cli.voice_utils import choose_narrator_voice
 
 load_dotenv()
 
