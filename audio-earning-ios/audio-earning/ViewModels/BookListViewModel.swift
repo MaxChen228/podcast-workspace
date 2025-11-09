@@ -34,7 +34,9 @@ final class BookListViewModel: ObservableObject {
         }
 
         libraryObserver = NotificationCenter.default.addObserver(forName: .bookLibraryDidChange, object: nil, queue: .main) { [weak self] _ in
-            self?.handleLibraryChange()
+            Task { @MainActor [weak self] in
+                self?.handleLibraryChange()
+            }
         }
     }
 
