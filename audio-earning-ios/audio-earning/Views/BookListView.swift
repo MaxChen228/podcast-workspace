@@ -10,11 +10,6 @@ import SwiftUI
 @MainActor
 struct BookListView: View {
     @StateObject private var viewModel: BookListViewModel
-    @State private var isShowingCacheDialog = false
-    @State private var isClearingCache = false
-    @State private var isShowingCacheResult = false
-    @State private var cacheResultTitle = ""
-    @State private var cacheResultMessage = ""
 
     init(viewModel: BookListViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -113,77 +108,8 @@ struct BookListView: View {
             }
         }
         .navigationTitle("我的書庫")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    isShowingCacheDialog = true
-                } label: {
-                    Label("Clear Cache", systemImage: "trash")
-                }
-                .disabled(isClearingCache)
-                .accessibilityIdentifier("clearCacheButton")
-            }
-        }
-        .confirmationDialog("Clear cached content?", isPresented: $isShowingCacheDialog, titleVisibility: .visible) {
-            Button("Clear Cache", role: .destructive) {
-                isShowingCacheDialog = false
-                isClearingCache = true
-                Task {
-                    await clearCache()
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("這會刪除已下載的音訊、字幕與章節快取，但保留聆聽進度與收藏。")
-        }
-        .alert(cacheResultTitle, isPresented: $isShowingCacheResult) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(cacheResultMessage)
-        }
-        .overlay {
-            if isClearingCache {
-                ProgressView("Clearing cache…")
-                    .padding()
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-        }
         .onAppear {
             viewModel.loadBooks()
-        }
-    }
-
-    @MainActor
-    private func handleCacheClearSuccess(_ summary: CacheClearSummary) {
-        isClearingCache = false
-        cacheResultTitle = "Cache Cleared"
-        cacheResultMessage = cacheResultDescription(for: summary)
-        isShowingCacheResult = true
-        viewModel.loadBooks(force: true)
-    }
-
-    @MainActor
-    private func handleCacheClearFailure(_ error: Error) {
-        isClearingCache = false
-        cacheResultTitle = "Unable to Clear Cache"
-        cacheResultMessage = error.localizedDescription
-        isShowingCacheResult = true
-    }
-
-    private func clearCache() async {
-        do {
-            let summary = try await viewModel.clearCaches()
-            handleCacheClearSuccess(summary)
-        } catch {
-            handleCacheClearFailure(error)
-        }
-    }
-
-    private func cacheResultDescription(for summary: CacheClearSummary) -> String {
-        if summary.removedMediaFiles > 0 {
-            return "已移除 \(summary.removedMediaFiles) 個媒體快取檔案，章節資料已重整。聆聽進度已保留。"
-        } else {
-            return "未找到可刪除的媒體快取，章節資料已重整。聆聽進度已保留。"
         }
     }
 
