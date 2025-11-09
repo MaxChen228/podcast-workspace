@@ -468,8 +468,8 @@ curl -H "Authorization: Bearer your_token" \
 ## 需要幫助？
 
 - 📖 查看 [Swagger UI](http://localhost:8000/docs) 交互式文檔
-- 🐛 [報告 API 問題](https://github.com/your-org/storytelling-backend/issues)
-- 💬 [API 討論](https://github.com/your-org/storytelling-backend/discussions)
+- 🐛 [報告 API 問題](https://github.com/MaxChen228/podcast-workspace/issues)
+- 💬 [API 討論](https://github.com/MaxChen228/podcast-workspace/discussions)
 
 ---
 
@@ -567,4 +567,3 @@ Content-Type: application/json
 |--------|------|
 | `400` | 欄位缺失或格式錯誤 |
 | `503` | NEWS 功能未啟用 |
-

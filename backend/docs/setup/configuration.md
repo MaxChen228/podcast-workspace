@@ -5,12 +5,11 @@
 ## 配置文件位置
 
 ```
-backend/
-└── config/
-    └── podcast_config.yaml  # 主配置文件（可用 CONFIG_ROOT 覆寫位置）
+storytelling-cli/
+└── podcast_config.yaml  # CLI 主配置文件（可搭配 CONFIG_ROOT 供 CLI 覆寫位置）
 ```
 
-> 若在部署環境中需要放置不同設定，請將 `CONFIG_ROOT` 環境變數指向自訂目錄（例如 `/etc/storytelling-config`），FastAPI 會從該目錄尋找 `podcast_config.yaml`。
+> ⚠️ **注意**：`podcast_config.yaml` 僅供 CLI 內容生產使用，FastAPI 後端僅依賴 `DATA_ROOT`/`OUTPUT_ROOT` 取得輸出資料。
 
 ## 快速配置
 

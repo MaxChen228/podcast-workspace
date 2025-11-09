@@ -2,6 +2,8 @@
 
 推薦的播客生成工作流程和最佳實踐。
 
+> ⚠️ **提示**：本指南中的 `./run.sh`、生成腳本/音訊等 CLI 操作皆在 `storytelling-cli/` 目錄執行；backend 僅負責 FastAPI 服務。
+
 ## 完整工作流程
 
 ```mermaid
@@ -563,5 +565,5 @@ vim podcast_config.yaml
 ## 需要幫助？
 
 - 📖 查看 [故障排除指南](../operations/troubleshooting.md)
-- 💬 [討論最佳實踐](https://github.com/your-org/storytelling-backend/discussions)
-- 🐛 [報告問題](https://github.com/your-org/storytelling-backend/issues)
+- 💬 [討論最佳實踐](https://github.com/MaxChen228/podcast-workspace/discussions)
+- 🐛 [報告問題](https://github.com/MaxChen228/podcast-workspace/issues)

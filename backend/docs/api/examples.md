@@ -313,5 +313,5 @@ try {
 ## 需要幫助？
 
 - 📖 [API 文檔](reference.md)
-- 🐛 [報告問題](https://github.com/your-org/storytelling-backend/issues)
-- 💬 [討論區](https://github.com/your-org/storytelling-backend/discussions)
+- 🐛 [報告問題](https://github.com/MaxChen228/podcast-workspace/issues)
+- 💬 [討論區](https://github.com/MaxChen228/podcast-workspace/discussions)

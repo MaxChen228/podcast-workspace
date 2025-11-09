@@ -29,7 +29,7 @@
 | 任務 | 影響檔案 | 檢查點 |
 | --- | --- | --- |
 | 1. 以 `OUTPUT_ROOT` / `DATA_ROOT` 環境變數取代硬編碼，並在未設定時 fallback 至 `output/` | `run.sh`, `storytelling_cli/__main__.py:51`, `server/app/config.py:28`, `scripts/import_gemini_dialogue.py`, 其他直接引用 `output/` 的腳本 | CLI 可寫入自訂資料夾；FastAPI 可從自訂路徑讀取 |
-| 2. 將 `podcast_config.yaml`、`.env` 等設定路徑抽象為 `CONFIG_ROOT` | `storytelling_cli/__main__.py`, `generate_*.py`, `preprocess_chapters.py`, `server/app/config.py` | 兩邊可透過環境變數或 CLI 參數覆寫設定 |
+| 2. 將 `podcast_config.yaml`、`.env` 等設定路徑抽象為 `CONFIG_ROOT` | `storytelling_cli/__main__.py`, `generate_*.py`, `preprocess_chapters.py` | CLI 端可透過環境變數或參數覆寫設定 |
 | 3. 重構依賴清單：新增 `requirements/cli.txt` (或 `content-worker.txt`)，`requirements/server.txt` 不再 `-r base.txt` | `requirements/` 目錄、Dockerfile | Docker build 不再安裝 LLM/TTS 套件 |
 | 4. 更新文檔與 `.env.example` 說明新的環境變數 | `storytelling-backend/README.md`, `docs/setup/configuration.md`, `.env.example` | 使用者知道如何設定新的路徑變數 |
 

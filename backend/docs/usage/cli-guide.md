@@ -501,5 +501,5 @@ python preprocess_chapters.py --book-id foundation --start-chapter 1 --end-chapt
 ## 反饋和建議
 
 如果您有任何建議或發現問題：
-- 🐛 [報告問題](https://github.com/your-org/storytelling-backend/issues)
-- 💡 [提出功能請求](https://github.com/your-org/storytelling-backend/discussions)
+- 🐛 [報告問題](https://github.com/MaxChen228/podcast-workspace/issues)
+- 💡 [提出功能請求](https://github.com/MaxChen228/podcast-workspace/discussions)

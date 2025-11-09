@@ -4,17 +4,12 @@ Configuration helpers for the FastAPI backend.
 
 from __future__ import annotations
 
-import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
-import yaml
 from dotenv import load_dotenv
-
-
-logger = logging.getLogger(__name__)
 
 
 def _resolve_path(raw: str) -> Path:
@@ -33,10 +28,6 @@ class ServerSettings:
     project_root: Path = field(default_factory=lambda: _resolve_path("."))
     data_root: Path = field(default_factory=lambda: _resolve_path("output"))
     data_root_raw: str = "output"
-    config_root: Path = field(default_factory=lambda: _resolve_path("config"))
-    config_root_raw: str = "config"
-    config_path: Path = field(default_factory=lambda: _resolve_path("config") / "podcast_config.yaml")
-    config_data: Dict[str, Any] = field(default_factory=dict)
     cors_origins: List[str] = field(default_factory=list)
     gzip_min_size: int = 512
     sentence_explainer_model: str = "gemini-2.5-flash-lite"
@@ -69,20 +60,6 @@ class ServerSettings:
         else:
             data_root = _resolve_path(data_root_raw)
 
-        config_root_raw = (os.getenv("CONFIG_ROOT", "config") or "config").strip()
-        config_root = _resolve_path(config_root_raw)
-        config_path = config_root / "podcast_config.yaml"
-        config_data: Dict[str, Any] = {}
-        if config_path.exists():
-            try:
-                config_data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-            except yaml.YAMLError as exc:
-                logger.warning("Failed to load podcast_config.yaml from %s: %s", config_path, exc)
-        else:
-            logger.info(
-                "CONFIG_ROOT resolved to %s but podcast_config.yaml not found; proceeding with defaults",
-                config_path,
-            )
         cors_raw = os.getenv("CORS_ORIGINS", "")
         cors_origins = [origin.strip() for origin in cors_raw.split(",") if origin.strip()]
         gzip_min_size = int(os.getenv("GZIP_MIN_SIZE", "512"))
@@ -125,10 +102,6 @@ class ServerSettings:
             project_root=project_root,
             data_root=data_root,
             data_root_raw=data_root_raw,
-            config_root=config_root,
-            config_root_raw=config_root_raw,
-            config_path=config_path,
-            config_data=config_data,
             cors_origins=cors_origins,
             gzip_min_size=gzip_min_size,
             sentence_explainer_model=sentence_explainer_model,
