@@ -36,6 +36,17 @@ class ServerSettings:
     media_delivery_mode: str = "local"
     gcs_mirror_include_suffixes: Optional[List[str]] = None
     signed_url_ttl_seconds: int = 600
+    news_feature_enabled: bool = False
+    bing_news_endpoint: str = "https://api.bing.microsoft.com/v7.0/news"
+    bing_news_search_endpoint: str = "https://api.bing.microsoft.com/v7.0/news/search"
+    bing_news_api_key: Optional[str] = None
+    bing_news_market: str = "en-US"
+    news_category_whitelist: List[str] = field(default_factory=list)
+    news_cache_ttl_seconds: int = 900
+    news_default_count: int = 10
+    news_max_count: int = 25
+    news_http_timeout: float = 10.0
+    news_events_dir: Path = field(default_factory=lambda: _resolve_path("logs/news_events"))
 
     @classmethod
     def load(cls) -> "ServerSettings":
@@ -72,6 +83,23 @@ class ServerSettings:
             include_suffixes = None
         signed_url_ttl_seconds = max(60, int(os.getenv("SIGNED_URL_TTL_SECONDS", "600")))
 
+        news_feature_enabled = os.getenv("NEWS_FEATURE_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+        bing_news_endpoint = os.getenv("BING_NEWS_ENDPOINT", "https://api.bing.microsoft.com/v7.0/news").rstrip("/")
+        bing_news_search_endpoint = os.getenv(
+            "BING_NEWS_SEARCH_ENDPOINT",
+            f"{bing_news_endpoint}/search",
+        ).rstrip("/")
+        bing_news_api_key = os.getenv("BING_NEWS_KEY") or None
+        bing_news_market = os.getenv("BING_NEWS_MARKET", "en-US")
+        category_whitelist_raw = os.getenv("BING_NEWS_CATEGORY_WHITELIST", "")
+        news_category_whitelist = [item.strip().lower() for item in category_whitelist_raw.split(",") if item.strip()]
+        news_cache_ttl_seconds = max(30, int(os.getenv("NEWS_CACHE_TTL_SECONDS", "900")))
+        news_default_count = max(1, int(os.getenv("NEWS_DEFAULT_COUNT", "10")))
+        news_max_count = max(news_default_count, int(os.getenv("NEWS_MAX_COUNT", "25")))
+        news_http_timeout = float(os.getenv("NEWS_HTTP_TIMEOUT", "10"))
+        news_events_dir_raw = os.getenv("NEWS_EVENTS_DIR", "logs/news_events")
+        news_events_dir = _resolve_path(news_events_dir_raw)
+
         return cls(
             project_root=project_root,
             data_root=data_root,
@@ -84,4 +112,15 @@ class ServerSettings:
             media_delivery_mode=media_delivery_mode,
             gcs_mirror_include_suffixes=include_suffixes,
             signed_url_ttl_seconds=signed_url_ttl_seconds,
+            news_feature_enabled=news_feature_enabled,
+            bing_news_endpoint=bing_news_endpoint,
+            bing_news_search_endpoint=bing_news_search_endpoint,
+            bing_news_api_key=bing_news_api_key,
+            bing_news_market=bing_news_market,
+            news_category_whitelist=news_category_whitelist,
+            news_cache_ttl_seconds=news_cache_ttl_seconds,
+            news_default_count=news_default_count,
+            news_max_count=news_max_count,
+            news_http_timeout=news_http_timeout,
+            news_events_dir=news_events_dir,
         )

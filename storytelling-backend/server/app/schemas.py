@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -83,3 +83,39 @@ class AssetList(BaseModel):
     """資源清單回應。"""
 
     assets: list[str] = Field(default_factory=list, description="Available asset filenames")
+
+
+class NewsArticle(BaseModel):
+    """Single news article normalized for the app."""
+
+    id: str
+    title: str
+    url: str
+    summary: Optional[str] = None
+    image_url: Optional[str] = None
+    category: Optional[str] = None
+    provider_name: Optional[str] = None
+    published_at: Optional[str] = None
+    source: str = "bing-news"
+
+
+class NewsHeadlineResponse(BaseModel):
+    articles: list[NewsArticle] = Field(default_factory=list)
+    category: Optional[str] = None
+    market: str
+    count: int
+    cached: bool = False
+
+
+class NewsSearchResponse(NewsHeadlineResponse):
+    query: str
+
+
+class NewsInteraction(BaseModel):
+    article_id: str = Field(..., min_length=4, max_length=64)
+    article_url: str = Field(..., min_length=5)
+    action: Literal["open", "share", "save", "impression"] = "open"
+    category: Optional[str] = None
+    client_ts: Optional[str] = None
+    device_locale: Optional[str] = None
+    market: Optional[str] = None

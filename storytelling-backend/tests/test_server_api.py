@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import sys
 
 import pytest
 from fastapi.testclient import TestClient
+
+os.environ["DISABLE_SENTENCE_EXPLAINER"] = "1"
+os.environ.setdefault("GEMINI_API_KEY", "")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -13,8 +17,11 @@ if str(PROJECT_ROOT) not in sys.path:
 
 
 from server.app import ServerSettings, create_app
+from server.app.schemas import NewsArticle
 from server.app.services import (
     ChapterData,
+    NewsFetchResult,
+    NewsServiceError,
     SentenceExplanationResult,
     SubtitleData,
     VocabularyEntry,
@@ -64,6 +71,50 @@ class DummyExplanationService:
             chinese_meaning=f"{phrase}-中文解釋",
             cached=is_cached,
         )
+
+
+class DummyNewsService:
+    def __init__(self) -> None:
+        self.headline_calls = []
+        self.search_calls = []
+
+    async def fetch_headlines(self, *, category: str | None, market: str | None, count: int | None):
+        self.headline_calls.append((category, market, count))
+        return _news_result(category or "technology", market or "en-US", count or 5, cached=False)
+
+    async def search_news(self, *, query: str, market: str | None, count: int | None):
+        self.search_calls.append((query, market, count))
+        if not query:
+            raise NewsServiceError("query required")
+        return _news_result(None, market or "en-US", count or 5, cached=False)
+
+
+class DummyNewsLogger:
+    def __init__(self) -> None:
+        self.events: list[dict] = []
+
+    def log(self, payload: dict) -> None:
+        self.events.append(payload)
+
+
+def _news_result(category: str | None, market: str, count: int, cached: bool):
+    article = NewsArticle(
+        id="demo",
+        title="Demo Article",
+        url="https://example.com",
+        summary="summary",
+        image_url=None,
+        category=category,
+        provider_name="Example",
+        published_at="2024-01-01T00:00:00Z",
+    )
+    return NewsFetchResult(
+        articles=[article],
+        category=category,
+        market=market,
+        count=count,
+        cached=cached,
+    )
 
 
 @pytest.fixture
@@ -164,6 +215,8 @@ def sample_data(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def test_client(sample_data: Path) -> TestClient:
+    os.environ["GEMINI_API_KEY"] = ""
+    os.environ["DISABLE_SENTENCE_EXPLAINER"] = "1"
     settings = ServerSettings(
         data_root=sample_data,
         cors_origins=[],
@@ -171,6 +224,21 @@ def test_client(sample_data: Path) -> TestClient:
     )
     app = create_app(settings)
     app.state.sentence_explainer = DummyExplanationService()
+    app.state.news_service = DummyNewsService()
+    app.state.news_event_logger = DummyNewsLogger()
+    return TestClient(app)
+
+
+@pytest.fixture
+def disabled_news_client(sample_data: Path) -> TestClient:
+    os.environ["GEMINI_API_KEY"] = ""
+    os.environ["DISABLE_SENTENCE_EXPLAINER"] = "1"
+    settings = ServerSettings(
+        data_root=sample_data,
+        cors_origins=[],
+        gzip_min_size=32,
+    )
+    app = create_app(settings)
     return TestClient(app)
 
 
@@ -198,6 +266,37 @@ def test_chapter_playback_payload(test_client: TestClient) -> None:
     assert data["audio_url"].endswith("/books/demo_book/chapters/chapter0/audio")
     assert data["subtitles_url"].endswith("/books/demo_book/chapters/chapter0/subtitles")
     assert "ETag" in response.headers
+
+
+def test_news_headlines_endpoint(test_client: TestClient) -> None:
+    response = test_client.get("/news/headlines?category=technology&count=3")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["count"] == 3
+    assert payload["articles"]
+
+
+def test_news_search_endpoint_requires_query(test_client: TestClient) -> None:
+    response = test_client.get("/news/search", params={"q": "swift", "count": 2})
+    assert response.status_code == 200
+    assert response.json()["query"] == "swift"
+
+
+def test_news_events_logging(test_client: TestClient) -> None:
+    payload = {
+        "article_id": "demo",
+        "article_url": "https://example.com",
+        "action": "open",
+    }
+    response = test_client.post("/news/events", json=payload)
+    assert response.status_code == 202
+    logger = test_client.app.state.news_event_logger
+    assert logger.events and logger.events[-1]["article_id"] == "demo"
+
+
+def test_news_disabled_returns_503(disabled_news_client: TestClient) -> None:
+    response = disabled_news_client.get("/news/headlines")
+    assert response.status_code == 503
 
 
 def test_fetch_subtitles_as_srt(test_client: TestClient) -> None:

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Generator, List, Optional, Tuple
 from urllib.parse import quote
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -23,6 +23,9 @@ from .schemas import (
     BookItem,
     ChapterItem,
     ChapterPlayback,
+    NewsHeadlineResponse,
+    NewsInteraction,
+    NewsSearchResponse,
     PhraseExplanationRequest,
     SentenceExplanationRequest,
     SentenceExplanationResponse,
@@ -31,6 +34,12 @@ from .schemas import (
 from .services import (
     BookData,
     ChapterData,
+    NewsAPIError,
+    NewsEventLogger,
+    NewsFetchResult,
+    NewsService,
+    NewsServiceError,
+    NewsValidationError,
     OutputDataCache,
     SentenceExplanationError,
     SentenceExplanationResult,
@@ -158,6 +167,20 @@ def create_app(settings: Optional[ServerSettings] = None) -> FastAPI:
         logger.warning("Sentence explanation disabled: %s", exc)
         explanation_service = None
 
+    news_service: Optional[NewsService] = None
+    news_logger: Optional[NewsEventLogger] = None
+    if settings.news_feature_enabled:
+        try:
+            news_service = NewsService.from_settings(settings)
+            news_logger = NewsEventLogger(settings.news_events_dir)
+            logger.info("News feature enabled")
+        except NewsServiceError as exc:  # includes config errors
+            logger.error("Failed to initialize NewsService: %s", exc)
+            news_service = None
+            news_logger = None
+    else:
+        logger.info("News feature disabled")
+
     app = FastAPI(
         title="Storytelling Output API",
         version="0.1.0",
@@ -168,6 +191,8 @@ def create_app(settings: Optional[ServerSettings] = None) -> FastAPI:
     app.state.cache = cache
     app.state.sentence_explainer = explanation_service
     app.state.gcs_mirror = mirror
+    app.state.news_service = news_service
+    app.state.news_event_logger = news_logger
 
     if settings.cors_origins:
         logger.info("Configuring CORS for origins: %s", settings.cors_origins)
@@ -202,10 +227,82 @@ def get_sentence_explainer(request: Request) -> Optional[SentenceExplanationServ
     return getattr(request.app.state, "sentence_explainer", None)
 
 
+def get_news_service(request: Request) -> NewsService:
+    service = getattr(request.app.state, "news_service", None)
+    if service is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="News feature disabled")
+    return service
+
+
+def get_news_logger(request: Request) -> NewsEventLogger:
+    logger_obj = getattr(request.app.state, "news_event_logger", None)
+    if logger_obj is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="News feature disabled")
+    return logger_obj
+
+
 def _register_routes(app: FastAPI) -> None:
     @app.get("/health")
     async def health_check() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/news/headlines", response_model=NewsHeadlineResponse)
+    async def news_headlines(
+        category: Optional[str] = Query(
+            default=None,
+            description="Bing news category (e.g., 'technology').",
+        ),
+        market: Optional[str] = Query(default=None, description="Locale market code, e.g., en-US."),
+        count: Optional[int] = Query(default=None, ge=1, description="Number of articles to return."),
+        news_service: NewsService = Depends(get_news_service),
+    ) -> NewsHeadlineResponse:
+        try:
+            result = await news_service.fetch_headlines(category=category, market=market, count=count)
+        except NewsValidationError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        except NewsAPIError as exc:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+        except NewsServiceError as exc:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+        return NewsHeadlineResponse(
+            articles=result.articles,
+            category=result.category,
+            market=result.market,
+            count=result.count,
+            cached=result.cached,
+        )
+
+    @app.get("/news/search", response_model=NewsSearchResponse)
+    async def news_search(
+        q: str = Query(..., min_length=1, description="Search query"),
+        market: Optional[str] = Query(default=None, description="Locale market code, e.g., en-US."),
+        count: Optional[int] = Query(default=None, ge=1, description="Number of articles to return."),
+        news_service: NewsService = Depends(get_news_service),
+    ) -> NewsSearchResponse:
+        try:
+            result = await news_service.search_news(query=q, market=market, count=count)
+        except NewsValidationError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        except NewsAPIError as exc:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+        except NewsServiceError as exc:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+        return NewsSearchResponse(
+            articles=result.articles,
+            category=result.category,
+            market=result.market,
+            count=result.count,
+            cached=result.cached,
+            query=q,
+        )
+
+    @app.post("/news/events", status_code=status.HTTP_202_ACCEPTED)
+    async def news_events(
+        payload: NewsInteraction,
+        news_logger: NewsEventLogger = Depends(get_news_logger),
+    ) -> dict[str, str]:
+        await run_in_threadpool(news_logger.log, payload.model_dump())
+        return {"status": "accepted"}
 
     @app.get("/debug/gcs")
     async def debug_gcs(

@@ -60,6 +60,15 @@ class SentenceExplanationService:
     @classmethod
     def from_settings(cls, settings: "ServerSettings") -> Optional["SentenceExplanationService"]:
         load_dotenv()
+
+        if (settings.sentence_explainer_model or "").strip().lower() == "disabled":
+            logger.info("Sentence explanation disabled via settings.")
+            return None
+
+        if os.getenv("DISABLE_SENTENCE_EXPLAINER", "").strip().lower() in {"1", "true", "yes"}:
+            logger.info("Sentence explanation disabled via DISABLE_SENTENCE_EXPLAINER flag.")
+            return None
+
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             logger.info("GEMINI_API_KEY is not configured; sentence explanation disabled.")
@@ -447,4 +456,3 @@ class SentenceExplanationService:
             - 僅輸出 JSON，不要額外解說。
             """
         ).strip()
-

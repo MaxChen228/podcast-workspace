@@ -40,6 +40,17 @@ protocol APIServiceProtocol: AnyObject {
     func clearMediaCache() throws -> Int
 }
 
+protocol NewsServiceProtocol: AnyObject {
+    func fetchHeadlines(category: String?, market: String?, count: Int?, forceRefresh: Bool) async throws -> NewsFeed
+    func searchNews(query: String, market: String?, count: Int?, forceRefresh: Bool) async throws -> NewsFeed
+    func log(event: NewsEventPayload) async
+}
+
+protocol NewsPreferenceStoring: AnyObject {
+    var market: String { get set }
+    var lastCategory: String? { get set }
+}
+
 /// Persists and retrieves backend endpoint configurations.
 protocol BackendConfigurationStoring: AnyObject {
     var endpoints: [BackendEndpoint] { get }

@@ -13,7 +13,7 @@ Audio Earning iOS 採用 SwiftUI + MVVM 結合自訂服務層，並透過依賴�
 | Utilities | `Utilities/` | 共用 helper：`CachePolicy`, `AudioPlaybackController`, `WaveformGenerator` 等。
 
 ## 依賴注入
-- `AppDependencyContainer` 遞給 View 需要的協定（`APIServiceProtocol`, `BackendConfigurationStoring`, `CacheManaging`）。
+- `AppDependencyContainer` 遞給 View 需要的協定（`APIServiceProtocol`, `BackendConfigurationStoring`, `CacheManaging`, `NewsServiceProtocol`）。
 - `DependencyEnvironment.swift` 讓任何 SwiftUI View 以 `@Environment(\.dependencies)` 取用，方便預覽／測試注入 stub。
 - 服務都以協定對外 (`ServiceProtocols.swift`)，避免直接耦合單例。
 
@@ -25,6 +25,7 @@ Audio Earning iOS 採用 SwiftUI + MVVM 結合自訂服務層，並透過依賴�
 
 ## 播放與字幕管線
 - `AudioPlaybackController` 控制 `AVPlayer`，加上 `addPeriodicTimeObserver` 每 0.1 秒回報時間。
+- `NewsService` + `NewsPreferenceStore` 封裝 `/news/*` 端點與使用者偏好，`NewsFeedViewModel` 透過 Task+async/await 管理快取與互動事件上報。
 - `SubtitleRepository` 解析 SRT（`SRTParser`），`AudioPlayerViewModel` 用目前字幕索引避免全表搜尋；若字幕量極大，可切換二分搜尋模式。
 - 視覺層由 `SubtitleView` / `SelectableSubtitleTextView` 呈現文字、`WaveformView` 使用 `WaveformGenerator` 降採樣 500 個樣本以 Canvas 繪圖。
 

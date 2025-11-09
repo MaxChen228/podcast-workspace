@@ -43,6 +43,9 @@ uvicorn server.app.main:app --host 0.0.0.0 --port 8000 --workers 4
 | `GET` | `/books/{book_id}/chapters/{chapter_id}` | 獲取章節詳情 |
 | `GET` | `/books/{book_id}/chapters/{chapter_id}/audio` | 下載音頻 |
 | `GET` | `/books/{book_id}/chapters/{chapter_id}/subtitles` | 下載字幕 |
+| `GET` | `/news/headlines` | 取得 Bing 分類新聞（需啟用 NEWS_FEATURE）|
+| `GET` | `/news/search` | 搜尋最新新聞 |
+| `POST` | `/news/events` | 回報新聞點擊/分享行為 |
 
 ### 管理端點（已移除）
 
@@ -467,3 +470,101 @@ curl -H "Authorization: Bearer your_token" \
 - 📖 查看 [Swagger UI](http://localhost:8000/docs) 交互式文檔
 - 🐛 [報告 API 問題](https://github.com/your-org/storytelling-backend/issues)
 - 💬 [API 討論](https://github.com/your-org/storytelling-backend/discussions)
+
+---
+
+### 新聞：分類頭條 `/news/headlines`
+
+啟用 `NEWS_FEATURE_ENABLED=1` 並設定 `BING_NEWS_KEY` 後，可直接借用 Bing News Search API 顯示高品質新聞。
+
+```http
+GET /news/headlines?category=technology&count=5&market=en-US
+```
+
+| 參數 | 類型 | 必需 | 描述 |
+|------|------|------|------|
+| `category` | string | 否 | Bing 官方分類名稱（`technology`, `business`, `entertainment`...）。若環境變數設定白名單，超出清單將回傳 400。|
+| `market` | string | 否 | 地區語系，預設 `BING_NEWS_MARKET`。|
+| `count` | integer | 否 | 單次回傳文章數，介於 1 ～ `NEWS_MAX_COUNT`。|
+
+**示例回應**
+
+```json
+{
+  "category": "technology",
+  "market": "en-US",
+  "count": 5,
+  "cached": true,
+  "articles": [
+    {
+      "id": "4d6ef13c9a7a6c3c4e61d9f7",
+      "title": "Apple introduces new Swift features",
+      "summary": "WWDC recap...",
+      "url": "https://www.bing.com/...",
+      "image_url": "https://.../thumb.jpg",
+      "provider_name": "The Verge",
+      "published_at": "2025-11-05T08:00:00Z",
+      "source": "bing-news"
+    }
+  ]
+}
+```
+
+**錯誤碼**
+
+| 狀態碼 | 描述 |
+|--------|------|
+| `400` | 參數無效（分類不允許或 count < 1）|
+| `502` | Bing API 回覆錯誤或被速率限制 |
+| `503` | NEWS 功能未啟用或服務初始化失敗 |
+
+---
+
+### 新聞：全文搜尋 `/news/search`
+
+```http
+GET /news/search?q=openai&market=en-US&count=10
+```
+
+| 參數 | 描述 |
+|------|------|
+| `q` | 必填搜尋關鍵字，支援自然語言輸入。|
+| `market`, `count` | 與 `/news/headlines` 相同。|
+
+回應格式同上，額外包含 `"query": "openai"` 欄位。
+
+---
+
+### 新聞：互動回報 `/news/events`
+
+將使用者在 iOS App 中對新聞的「開啟、分享、收藏」行為回報給後端，以 JSONL 儲存於 `NEWS_EVENTS_DIR`，做為未來個人化推薦的冷啟啟動數據。
+
+```http
+POST /news/events
+Content-Type: application/json
+
+{
+  "article_id": "4d6ef13c9a7a6c3c4e61d9f7",
+  "article_url": "https://www.bing.com/...",
+  "action": "open",
+  "category": "technology",
+  "client_ts": "2025-11-09T10:21:00+08:00",
+  "device_locale": "zh-TW"
+}
+```
+
+**回應**
+
+```json
+{
+  "status": "accepted"
+}
+```
+
+**錯誤碼**
+
+| 狀態碼 | 描述 |
+|--------|------|
+| `400` | 欄位缺失或格式錯誤 |
+| `503` | NEWS 功能未啟用 |
+

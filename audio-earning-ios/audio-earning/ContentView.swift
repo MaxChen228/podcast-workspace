@@ -13,6 +13,13 @@ struct ContentView: View {
     var body: some View {
         TabView {
             NavigationStack {
+                NewsFeedView(viewModel: dependencies.makeNewsFeedViewModel())
+            }
+            .tabItem {
+                Label("新聞", systemImage: "newspaper")
+            }
+
+            NavigationStack {
                 BookListView(viewModel: dependencies.makeBookListViewModel())
             }
             .tabItem {

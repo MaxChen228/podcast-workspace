@@ -12,6 +12,15 @@ from .explanation import (
     SentenceExplanationService,
     VocabularyEntry,
 )
+from .news_service import (
+    NewsEventLogger,
+    NewsFetchResult,
+    NewsService,
+    NewsServiceError,
+    NewsValidationError,
+    NewsAPIError,
+    NewsConfigurationError,
+)
 
 __all__ = [
     "BookData",
@@ -22,4 +31,11 @@ __all__ = [
     "SentenceExplanationResult",
     "SentenceExplanationService",
     "VocabularyEntry",
+    "NewsService",
+    "NewsFetchResult",
+    "NewsEventLogger",
+    "NewsServiceError",
+    "NewsValidationError",
+    "NewsAPIError",
+    "NewsConfigurationError",
 ]

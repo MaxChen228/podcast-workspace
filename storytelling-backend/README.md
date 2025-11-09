@@ -196,8 +196,25 @@ uvicorn server.app.main:app --reload --host 0.0.0.0 --port 8000
 - `GET /books/{book_id}/chapters/{chapter_id}` - 章節詳情
 - `GET /books/{book_id}/chapters/{chapter_id}/audio` - 音頻串流或簽名 URL
 - `GET /books/{book_id}/chapters/{chapter_id}/subtitles` - 字幕下載或簽名 URL
+- `GET /news/headlines` - 透過 Bing News 聚合分類新聞
+- `GET /news/search` - 透過 Bing News 搜尋最新文章
+- `POST /news/events` - 回報使用者點擊／互動事件
 
 👉 **[查看完整 API 文檔](docs/api/reference.md)**
+
+## 新聞整合（Bing News Search API）
+
+| 設定 | 說明 |
+|------|------|
+| `NEWS_FEATURE_ENABLED` | 設為 `1`/`true` 後啟用 `/news/*` 端點 |
+| `BING_NEWS_KEY` | 必填，Azure/Bing News Search API Key |
+| `BING_NEWS_MARKET` | 預設 `en-US`，可依使用者在 iOS 端切換 |
+| `BING_NEWS_CATEGORY_WHITELIST` | 逗號分隔（如 `technology,business`）；留空則允許全部官方分類 |
+| `NEWS_CACHE_TTL_SECONDS` | 伺服器端快取 TTL，預設 900 秒，避免觸發 API 限額 |
+| `NEWS_DEFAULT_COUNT` / `NEWS_MAX_COUNT` | 控制每次拉取的文章數量 |
+| `NEWS_EVENTS_DIR` | 用於存儲 `POST /news/events` 的 JSONL，預設 `logs/news_events` |
+
+> 建議在 Render Dashboard 內為上述環境變數建立 Secret，並在 iOS 端用 Remote Config 控制是否展示新聞分頁。
 
 > 🔐 若將後端部署到雲端平台（如 Render），建議設定 `MEDIA_DELIVERY_MODE=gcs-signed`，並搭配 `GCS_MIRROR_INCLUDE_SUFFIXES=.json` 與 `SIGNED_URL_TTL_SECONDS`，音檔/字幕會透過簽名 URL 直接由 GCS 下載，冷啟動更快也能節省記憶體。
 

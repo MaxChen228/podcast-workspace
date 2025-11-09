@@ -218,6 +218,12 @@ podcast-workspace/                 # Monorepo 根目錄
 - ✅ **多語言支援** - 支援 Spanish, French, German 等多種語言
 - ✅ **無縫整合** - 可匯入主系統作為特殊章節
 
+### 🗞️ 智慧新聞牆（Bing News）
+
+- ✅ **即開即用** - 將 `NEWS_FEATURE_ENABLED=1` 並提供 `BING_NEWS_KEY`，後端即會複寫 `/news/*` REST 端點。
+- ✅ **分類/搜尋** - 支援 Bing 既有分類（科技、商業等）與全文搜尋參數，避免冷啟動。
+- ✅ **數據累積** - `POST /news/events` 在 Render 上記錄用戶互動，為之後個人化推薦預先蒐集素材。
+
 ---
 
 ## 🛠 技術棧
@@ -226,7 +232,8 @@ podcast-workspace/                 # Monorepo 根目錄
 |------|------|------|
 | **AI/ML** | Gemini 2.5 Pro, Gemini TTS | 腳本生成、語音合成 |
 | **音訊處理** | Montreal Forced Aligner, pydub | 字幕對齊、音訊轉換 |
-| **後端** | FastAPI, Uvicorn, Pydantic | REST API 服務 |
+| **後端** | FastAPI, Uvicorn, Pydantic, httpx | REST API 服務、外部新聞整合 |
+| **內容來源** | Bing News Search API | 即時新聞聚合、分類/搜尋 |
 | **儲存** | Google Cloud Storage (GCS) | 媒體檔案儲存 |
 | **部署** | Render.com, Docker | 雲端部署 |
 | **前端** | SwiftUI, Combine, AVFoundation | iOS 原生應用 |
@@ -281,7 +288,7 @@ git log --oneline --graph --all
 1. **Monorepo 架構** - 統一版本管理，簡化協作
 2. **AI 驅動生成** - Gemini 2.5 Pro + TTS 生成高品質內容
 3. **詞級精準字幕** - MFA 對齊，避免估算漂移
-4. **完整離線支援** - iOS App 批次下載，完全離線播放
+4. **整合型新聞牆** - 一鍵啟用 Bing News API，無需自建爬蟲即可驗證產品假設
 5. **智慧快取策略** - 多層快取，最佳化使用者體驗
 6. **靈活部署** - Render 一鍵部署，GCS 媒體儲存
 
