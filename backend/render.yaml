@@ -44,7 +44,23 @@ services:
         value: 128
 
       # ==========================================
+      # News 功能配置（iOS 前端新聞 Tab）
+      # ==========================================
+      - key: NEWS_FEATURE_ENABLED
+        value: "true"
+
+      - key: NEWSDATA_DEFAULT_LANGUAGE
+        value: en
+
+      - key: NEWS_DEFAULT_COUNT
+        value: 10
+
+      - key: NEWS_MAX_COUNT
+        value: 10
+
+      # ==========================================
       # 敏感資訊（需在 Render Dashboard 手動設定）
       # ==========================================
       # GEMINI_API_KEY - 在 Dashboard Environment 頁面手動加入
+      # NEWSDATA_API_KEY - 在 Dashboard Environment 頁面手動加入（NewsData.io API 金鑰）
       # GOOGLE_APPLICATION_CREDENTIALS - 在 Dashboard Secret Files 上傳 JSON 後設為 /etc/secrets/gcs-service-account.json
