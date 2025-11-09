@@ -115,7 +115,21 @@ def clean_script_for_alignment(script_text: str) -> str:
     text = re.sub(r"\([^)]*[A-Z]{3,}[^)]*\)", " ", text)
     text = re.sub(r"\[[^\]]*\]", " ", text)
     text = re.sub(r"\{[^}]*\}", " ", text)
-    text = text.replace("—", ".").replace("...", ". ")
+
+    dash_replacements = {
+        "—": ". ",  # em dash
+        "–": ". ",  # en dash
+        "‑": ". ",  # non-breaking hyphen
+    }
+    for dash, replacement in dash_replacements.items():
+        text = text.replace(dash, replacement)
+
+    text = text.replace("...", ". ")
+    text = text.replace("…", ". ")
+
+    # Ensure punctuation is followed by at least one whitespace so tokens do not glue together.
+    text = re.sub(r"([.!?;:,])(?![\s\n])", r"\1 ", text)
+
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
@@ -202,10 +216,22 @@ def _run_mfa_align(
 def _tokenize_transcript(transcript_path: Path) -> List[Tuple[str, str]]:
     tokens: List[Tuple[str, str]] = []
     for line in transcript_path.read_text(encoding="utf-8").splitlines():
-        for raw in line.split():
-            normalized = "".join(ch.lower() for ch in raw if ch.isalpha() or ch == "'")
+        normalized_line = _ensure_token_boundaries(line)
+        for raw in normalized_line.split():
+            normalized = _normalize_token(raw)
             tokens.append((raw, normalized))
     return tokens
+
+
+def _ensure_token_boundaries(text: str) -> str:
+    # Guarantee there is whitespace after sentence punctuation even if the source lacks it.
+    text = re.sub(r"([.!?;:,])(?![\s\n])", r"\1 ", text)
+    return text
+
+
+def _normalize_token(raw: str) -> str:
+    cleaned = raw.replace("’", "'")
+    return "".join(ch.lower() for ch in cleaned if ch.isalpha() or ch == "'")
 
 
 def _extract_interval_tokens(textgrid_path: Path, tier_name: str = "words") -> List[Tuple[str, float, float]]:
