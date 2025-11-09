@@ -56,7 +56,7 @@ docker run -p 8000:8000 \
 
 | 環境變數 | 用途 | 預設值 |
 |---------|------|--------|
-| `DATA_ROOT` | 內容數據目錄（books、transcripts、音訊等） | `output` |
+| `DATA_ROOT` | 內容數據目錄（books、transcripts、音訊等） | `../output` |
 | `CONFIG_ROOT` | FastAPI 服務讀取 `podcast_config.yaml` 的目錄 | `config` |
 | `CORS_ORIGINS` | CORS 允許的來源（逗號分隔） | `""` |
 | `GZIP_MIN_SIZE` | Gzip 壓縮的最小檔案大小（bytes） | `512` |
@@ -133,7 +133,7 @@ API 從 GCS 下載檔案到記憶體後串流給客戶端。
 
 ```bash
 export MEDIA_DELIVERY_MODE=gcs-direct
-export DATA_ROOT=gs://your-bucket/output
+export DATA_ROOT=../output
 ```
 
 ### GCS Signed URL Mode（推薦用於生產環境）
