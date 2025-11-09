@@ -16,9 +16,9 @@ basic:
   speaking_pace: "slow"                # slow / neutral / fast
 
 paths:
-  books_root: "./data"                 # 所有書籍資料夾的根目錄
-  outputs_root: "./output"             # 各書籍輸出資料夾根目錄
-  transcripts_root: "./data/transcripts"
+  books_root: "../data"                # 所有書籍資料夾的根目錄（workspace 層級）
+  outputs_root: "../output"            # 各書籍輸出資料夾根目錄（workspace 層級）
+  transcripts_root: "../data/transcripts"
 
 books:
   defaults:
