@@ -15,7 +15,6 @@ struct BookListView: View {
     @State private var isShowingCacheResult = false
     @State private var cacheResultTitle = ""
     @State private var cacheResultMessage = ""
-    @State private var isShowingBackendSheet = false
 
     init() {
         self.init(viewModel: BookListViewModel())
@@ -128,14 +127,6 @@ struct BookListView: View {
                 .disabled(isClearingCache)
                 .accessibilityIdentifier("clearCacheButton")
             }
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    isShowingBackendSheet = true
-                } label: {
-                    Label("Server Settings", systemImage: "gearshape")
-                }
-                .accessibilityIdentifier("serverSettingsButton")
-            }
         }
         .confirmationDialog("Clear cached content?", isPresented: $isShowingCacheDialog, titleVisibility: .visible) {
             Button("Clear Cache", role: .destructive) {
@@ -163,9 +154,6 @@ struct BookListView: View {
         }
         .onAppear {
             viewModel.loadBooks()
-        }
-        .sheet(isPresented: $isShowingBackendSheet) {
-            BackendConfigurationSheet(isPresented: $isShowingBackendSheet, viewModel: viewModel)
         }
     }
 
@@ -223,9 +211,8 @@ struct BookListView: View {
     }
 }
 
-private struct BackendConfigurationSheet: View {
-    @Binding var isPresented: Bool
-    @ObservedObject var viewModel: BookListViewModel
+struct BackendConfigurationView: View {
+    @StateObject private var viewModel: BackendConfigurationViewModel
 
     @State private var testStatuses: [UUID: TestStatus] = [:]
     @State private var editorName: String = ""
@@ -236,55 +223,52 @@ private struct BackendConfigurationSheet: View {
     @State private var pendingDeletion: BackendEndpoint?
     @FocusState private var editorFocusedField: Field?
 
+    init(viewModel: BackendConfigurationViewModel = BackendConfigurationViewModel()) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
+
     var body: some View {
-        NavigationStack {
-            List {
-                if viewModel.endpoints.isEmpty {
-                    Section {
-                        Label("尚未設定任何後端", systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.secondary)
-                            .padding(.vertical, 4)
-                    }
-                } else {
-                    Section {
-                        ForEach(viewModel.endpoints) { endpoint in
-                            EndpointRow(
-                                endpoint: endpoint,
-                                isSelected: endpoint.id == viewModel.selectedEndpointID,
-                                status: testStatuses[endpoint.id] ?? .idle,
-                                onSelect: { viewModel.selectEndpoint(endpoint) },
-                                onTest: { runHealthCheck(for: endpoint) },
-                                onEdit: { presentEditor(for: endpoint) },
-                                onDelete: { pendingDeletion = endpoint },
-                                canDelete: viewModel.canDeleteEndpoint(endpoint)
-                            )
-                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                            .listRowSeparator(.hidden)
-                        }
+        List {
+            if viewModel.endpoints.isEmpty {
+                Section {
+                    Label("尚未設定任何後端", systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.secondary)
+                        .padding(.vertical, 4)
+                }
+            } else {
+                Section {
+                    ForEach(viewModel.endpoints) { endpoint in
+                        EndpointRow(
+                            endpoint: endpoint,
+                            isSelected: endpoint.id == viewModel.selectedEndpointID,
+                            status: testStatuses[endpoint.id] ?? .idle,
+                            onSelect: { viewModel.selectEndpoint(endpoint) },
+                            onTest: { runHealthCheck(for: endpoint) },
+                            onEdit: { presentEditor(for: endpoint) },
+                            onDelete: { pendingDeletion = endpoint },
+                            canDelete: viewModel.canDeleteEndpoint(endpoint)
+                        )
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowSeparator(.hidden)
                     }
                 }
             }
-            .listStyle(.insetGrouped)
-            .navigationTitle("伺服器設定")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("關閉") {
-                        isPresented = false
-                    }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("伺服器設定")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    presentEditor(for: nil)
+                } label: {
+                    Label("新增後端", systemImage: "plus")
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        presentEditor(for: nil)
-                    } label: {
-                        Label("新增後端", systemImage: "plus")
-                    }
-                    .accessibilityIdentifier("addBackendButton")
-                }
+                .accessibilityIdentifier("addBackendButton")
             }
-            .onChange(of: viewModel.endpoints) { oldValue, newValue in
-                let ids = Set(newValue.map(\.id))
-                testStatuses = testStatuses.filter { ids.contains($0.key) }
-            }
+        }
+        .onChange(of: viewModel.endpoints) { _, newValue in
+            let ids = Set(newValue.map(\.id))
+            testStatuses = testStatuses.filter { ids.contains($0.key) }
         }
         .sheet(isPresented: $isPresentingEditor) {
             NavigationStack {
@@ -344,11 +328,13 @@ private struct BackendConfigurationSheet: View {
                 pendingDeletion = nil
             }
         } message: {
-            if let endpoint = pendingDeletion {
-                Text("確定要刪除「\(endpoint.name)」連結嗎？")
-            }
+            Text("刪除後將無法再連線此伺服器，若要重新使用需再次輸入網址。")
         }
-        .presentationDetents([.medium, .large])
+    }
+
+    private enum Field: Hashable {
+        case name
+        case url
     }
 
     private func presentEditor(for endpoint: BackendEndpoint?) {
@@ -360,36 +346,33 @@ private struct BackendConfigurationSheet: View {
     }
 
     private func closeEditor() {
+        editingEndpoint = nil
         isPresentingEditor = false
-        editorFocusedField = nil
+        editorName = ""
+        editorURL = ""
+        editorErrorMessage = nil
     }
 
     private func submitEditor() {
-        if let endpoint = editingEndpoint {
-            editorErrorMessage = viewModel.updateEndpoint(endpoint, name: editorName, urlString: editorURL)
+        if let editingEndpoint {
+            editorErrorMessage = viewModel.updateEndpoint(editingEndpoint, name: editorName, urlString: editorURL)
         } else {
             editorErrorMessage = viewModel.addEndpoint(name: editorName, urlString: editorURL)
         }
 
-        if editorErrorMessage == nil {
-            closeEditor()
-        }
+        guard editorErrorMessage == nil else { return }
+        closeEditor()
     }
 
     private func deleteEndpoint(_ endpoint: BackendEndpoint) {
         viewModel.deleteEndpoint(endpoint)
-        testStatuses[endpoint.id] = nil
         pendingDeletion = nil
     }
 
     private func runHealthCheck(for endpoint: BackendEndpoint) {
+        testStatuses[endpoint.id] = .testing
         Task {
-            await MainActor.run {
-                testStatuses[endpoint.id] = .testing
-            }
-
             let result = await viewModel.testEndpoint(endpoint)
-
             await MainActor.run {
                 switch result {
                 case .success:
@@ -399,11 +382,6 @@ private struct BackendConfigurationSheet: View {
                 }
             }
         }
-    }
-
-    private enum Field {
-        case name
-        case url
     }
 
     private enum TestStatus: Equatable {
@@ -417,9 +395,9 @@ private struct BackendConfigurationSheet: View {
             case .idle:
                 return "尚未測試"
             case .testing:
-                return "測試中…"
+                return "測試中"
             case .success:
-                return "連線正常"
+                return "連線成功"
             case .failure:
                 return "連線失敗"
             }
@@ -428,13 +406,13 @@ private struct BackendConfigurationSheet: View {
         var icon: String {
             switch self {
             case .idle:
-                return "waveform"
+                return "bolt.horizontal.circle"
             case .testing:
                 return "hourglass"
             case .success:
-                return "checkmark.circle.fill"
+                return "checkmark.seal"
             case .failure:
-                return "exclamationmark.triangle.fill"
+                return "xmark.octagon"
             }
         }
 
@@ -443,11 +421,11 @@ private struct BackendConfigurationSheet: View {
             case .idle:
                 return .secondary
             case .testing:
-                return .secondary
+                return .orange
             case .success:
                 return .green
             case .failure:
-                return .orange
+                return .red
             }
         }
 

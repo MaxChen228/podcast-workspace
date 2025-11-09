@@ -13,11 +13,8 @@ final class BookListViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published private(set) var libraryRecords: [LibraryBookRecord] = []
-    @Published private(set) var endpoints: [BackendEndpoint] = []
-    @Published private(set) var selectedEndpointID: UUID?
 
     private let service: APIServiceProtocol
-    private let backendStore: BackendConfigurationStoring
     private let cacheManager: CacheManaging
     private let libraryManager: BookLibraryManaging
     private var hasLoaded = false
@@ -26,15 +23,12 @@ final class BookListViewModel: ObservableObject {
 
     init(
         service: APIServiceProtocol = APIService.shared,
-        backendStore: BackendConfigurationStoring = BackendConfigurationStore.shared,
         cacheManager: CacheManaging = CacheManager.shared,
         libraryManager: BookLibraryManaging = BookLibraryManager()
     ) {
         self.service = service
-        self.backendStore = backendStore
         self.cacheManager = cacheManager
         self.libraryManager = libraryManager
-        refreshEndpoints()
 
         backendObserver = NotificationCenter.default.addObserver(forName: .backendConfigurationDidChange, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -84,18 +78,51 @@ final class BookListViewModel: ObservableObject {
         return summary
     }
 
+    private func handleBackendChange() {
+        reloadAfterBackendChange()
+    }
+
+    private func reloadAfterBackendChange() {
+        hasLoaded = false
+        loadBooks(force: true)
+    }
+}
+
+@MainActor
+final class BackendConfigurationViewModel: ObservableObject {
+    @Published private(set) var endpoints: [BackendEndpoint] = []
+    @Published private(set) var selectedEndpointID: UUID?
+
+    private let service: APIServiceProtocol
+    private let backendStore: BackendConfigurationStoring
+    private var backendObserver: NSObjectProtocol?
+
+    init(
+        service: APIServiceProtocol = APIService.shared,
+        backendStore: BackendConfigurationStoring = BackendConfigurationStore.shared
+    ) {
+        self.service = service
+        self.backendStore = backendStore
+        refreshEndpoints()
+
+        backendObserver = NotificationCenter.default.addObserver(forName: .backendConfigurationDidChange, object: nil, queue: .main) { [weak self] _ in
+            self?.refreshEndpoints()
+        }
+    }
+
+    deinit {
+        if let observer = backendObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+
     func selectEndpoint(_ endpoint: BackendEndpoint) {
         backendStore.selectEndpoint(id: endpoint.id)
         refreshEndpoints()
     }
 
     func addEndpoint(name: String, urlString: String) -> String? {
-        let trimmedURL = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedURL.isEmpty else {
-            return "請輸入網址"
-        }
-
-        guard let url = URL(string: trimmedURL), let scheme = url.scheme?.lowercased(), ["http", "https"].contains(scheme) else {
+        guard let url = validateURL(from: urlString) else {
             return "請輸入合法的 http 或 https 網址"
         }
 
@@ -116,12 +143,7 @@ final class BookListViewModel: ObservableObject {
     }
 
     func updateEndpoint(_ endpoint: BackendEndpoint, name: String, urlString: String) -> String? {
-        let trimmedURL = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedURL.isEmpty else {
-            return "請輸入網址"
-        }
-
-        guard let url = URL(string: trimmedURL), let scheme = url.scheme?.lowercased(), ["http", "https"].contains(scheme) else {
+        guard let url = validateURL(from: urlString) else {
             return "請輸入合法的 http 或 https 網址"
         }
 
@@ -147,6 +169,7 @@ final class BookListViewModel: ObservableObject {
         }
     }
 
+<<<<<<< HEAD
     private func handleBackendChange() {
         refreshEndpoints()
         reloadAfterBackendChange()
@@ -162,9 +185,24 @@ final class BookListViewModel: ObservableObject {
         loadBooks(force: true)
     }
 
+=======
+>>>>>>> 2c4360b (feat: 設定頁提供伺服器設定入口)
     private func refreshEndpoints() {
         endpoints = backendStore.endpoints
         selectedEndpointID = backendStore.currentEndpoint.id
+    }
+
+    private func validateURL(from string: String) -> URL? {
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard
+            !trimmed.isEmpty,
+            let url = URL(string: trimmed),
+            let scheme = url.scheme?.lowercased(),
+            ["http", "https"].contains(scheme)
+        else {
+            return nil
+        }
+        return url
     }
 
     private func normalizedURLString(_ string: String) -> String {

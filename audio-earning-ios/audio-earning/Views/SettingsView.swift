@@ -9,6 +9,7 @@ import SwiftUI
 import UIKit
 
 struct SettingsView: View {
+    @Environment(\.dependencies) private var dependencies
     @State private var isShowingExportShare = false
     @State private var isShowingImportPicker = false
     @State private var exportedFileURL: URL?
@@ -19,6 +20,23 @@ struct SettingsView: View {
 
     var body: some View {
         List {
+            Section {
+                NavigationLink {
+                    BackendConfigurationView(viewModel: dependencies.makeBackendConfigurationViewModel())
+                } label: {
+                    Label {
+                        Text("伺服器設定")
+                    } icon: {
+                        Image(systemName: "server.rack")
+                            .foregroundColor(.purple)
+                    }
+                }
+            } header: {
+                Text("後端")
+            } footer: {
+                Text("調整 API 端點、測試連線並管理自訂伺服器清單。")
+            }
+
             // Section 1: 資料管理
             Section {
                 Button {
