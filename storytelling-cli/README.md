@@ -66,6 +66,19 @@ cp your_book_chapters.txt ../data/foundation/
 
 每個步驟可獨立執行，支援批次處理多個章節。
 
+### 離線測試 / Mock Pipeline
+
+需要在沒有 LLM / TTS API 的情況下驗證 CLI UI 或資料夾結構時，可使用 `scripts/mock_pipeline.py` 一次產生假腳本、音訊（靜音 wav）與字幕：
+
+```bash
+cd storytelling-cli
+./scripts/mock_pipeline.py --book-id gemini-demo --chapters 0-5
+```
+
+- 章節範圍語法與互動式 CLI 相同（例如 `0-3,7` 或 `all`）。
+- 輸出會寫入 `OUTPUT_ROOT/<book>/<chapter>/`，並在 `data/transcripts/` 生成對應 transcript，方便後續 CLI 模組掃描。
+- 產物為 mock 內容（靜音音檔、簡易字幕），僅用於流程測試，正式發布前仍需改跑真實生成腳本。
+
 ## 環境變數
 
 | 變數 | 用途 | 預設值 |
