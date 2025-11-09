@@ -16,13 +16,13 @@ graph TB
     end
 
     subgraph "雲端儲存層"
-        GCS[Google Cloud Storage<br/>gs://storytelling-output/output/<br/><br/>📦 僅存 .json metadata<br/>🎵 音訊 .mp3<br/>📝 字幕 .srt]
+        GCS[Google Cloud Storage<br/>gs://storytelling-output/output/<br/><br/>📦 完整存儲所有內容<br/>🎵 音訊 .mp3 (數百 MB)<br/>📝 字幕 .srt<br/>📄 腳本 + metadata .json]
     end
 
     subgraph "API 服務層 (Render Deployment)"
-        B[FastAPI Server<br/>storytelling-backend/server/<br/><br/>🔹 不生成內容<br/>🔹 掃描 output/ 或 GCS<br/>🔹 建立書籍/章節索引]
+        B[FastAPI Server<br/>GitHub: podcast-workspace<br/>rootDir: storytelling-backend<br/><br/>🔹 不生成內容<br/>🔹 掃描 GCS 遠程數據<br/>🔹 建立書籍/章節索引<br/>🔹 Starter Plan @ Singapore]
 
-        B1[GCSMirror<br/>同步 .json 到本地<br/>/tmp/storytelling-output]
+        B1[GCSMirror<br/>冷啟動同步 .json 到本地<br/>/tmp/storytelling-output<br/>節省記憶體與啟動時間]
         B2[OutputDataCache<br/>解析 metadata.json<br/>建立 API 索引]
 
         B --> B1 --> B2
@@ -42,12 +42,12 @@ graph TB
         C --> C4
     end
 
-    OUTPUT -.->|sync_output.sh<br/>rsync 上傳| GCS
-    GCS -.->|冷啟動同步<br/>僅下載 .json| B1
+    OUTPUT -.->|sync_output.sh<br/>上傳所有文件| GCS
+    GCS -.->|冷啟動同步<br/>僅下載 .json metadata| B1
 
-    B2 -->|REST API<br/>/books<br/>/chapters<br/>/audio ➜ 307<br/>/subtitles ➜ 307| C
+    B2 -->|REST API<br/>GET /books<br/>GET /books/{book}/chapters<br/>GET /audio → HTTP 307<br/>GET /subtitles → HTTP 307| C
 
-    GCS -.->|307 轉址<br/>公開 URL<br/>gcs-public mode| C
+    GCS -.->|gcs-public 模式<br/>HTTP 307 轉址<br/>https://storage.googleapis.com/...| C
 
     style A1 fill:#e3f2fd
     style A2 fill:#e3f2fd
