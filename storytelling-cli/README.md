@@ -27,6 +27,17 @@ cp .env.example .env
 # 編輯 .env，至少需要設定 GEMINI_API_KEY
 ```
 
+### 2.1 放置 Google 服務帳號檔案
+
+1. 將服務帳號 JSON 下載後置於 `storytelling-cli/secrets/google-translate-service-account.json`（此資料夾已被 `.gitignore` 排除，不會誤傳到 Git）。
+2. 在 `.env` 中設定
+
+   ```bash
+   GOOGLE_APPLICATION_CREDENTIALS=storytelling-cli/secrets/google-translate-service-account.json
+   ```
+
+   或在命令列輸入同樣的路徑，即可讓 CLI / gsutil / Render 等流程引用這份金鑰。
+
 ### 3. 準備資料
 
 CLI 使用以下目錄結構（可透過環境變數覆寫）：
@@ -87,7 +98,7 @@ cd storytelling-cli
 | `DATA_ROOT` | 資料目錄 | `../data/` |
 | `CONFIG_ROOT` | 配置目錄 | `.` (當前目錄) |
 | `GEMINI_API_KEY` | Gemini API 金鑰 | (必需) |
-| `GOOGLE_APPLICATION_CREDENTIALS` | GCS 服務帳號 JSON | (選填) |
+| `GOOGLE_APPLICATION_CREDENTIALS` | GCS 服務帳號 JSON 路徑（預設建議放 `storytelling-cli/secrets/...`） | (選填) |
 | `STORYTELLING_SYNC_BUCKET` | GCS 同步目標 | (選填) |
 
 **使用自訂路徑範例：**

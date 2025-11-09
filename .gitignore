@@ -41,6 +41,7 @@ DerivedData/
 .env
 .env.local
 .env.*.local
+storytelling-cli/secrets/
 
 # ==========================================
 # Build Outputs
