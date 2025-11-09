@@ -1,0 +1,57 @@
+graph TB
+    subgraph "內容生產層 (本地機器/專用伺服器)"
+        A1[生產機 - Storytelling<br/>storytelling-backend/run.sh]
+        A2[生產機 - Podcast<br/>gemini-2-podcast/]
+
+        A1_1[Step 1: 生成腳本<br/>generate_script.py<br/>Gemini 2.5 Pro]
+        A1_2[Step 2: 生成音頻<br/>generate_audio.py<br/>Gemini TTS]
+        A1_3[Step 3: 生成字幕<br/>generate_subtitles.py<br/>MFA 詞級對齊]
+
+        A1 --> A1_1 --> A1_2 --> A1_3
+
+        OUTPUT[output/<br/>foundation/chapter0/<br/>├─ podcast_script.txt<br/>├─ podcast.wav/mp3<br/>├─ subtitles.srt<br/>└─ metadata.json]
+
+        A1_3 --> OUTPUT
+        A2 --> |import_gemini_dialogue.py| OUTPUT
+    end
+
+    subgraph "雲端儲存層"
+        GCS[Google Cloud Storage<br/>gs://storytelling-output/output/<br/><br/>📦 僅存 .json metadata<br/>🎵 音訊 .mp3<br/>📝 字幕 .srt]
+    end
+
+    subgraph "API 服務層 (Render Deployment)"
+        B[FastAPI Server<br/>storytelling-backend/server/<br/><br/>🔹 不生成內容<br/>🔹 掃描 output/ 或 GCS<br/>🔹 建立書籍/章節索引]
+
+        B1[GCSMirror<br/>同步 .json 到本地<br/>/tmp/storytelling-output]
+        B2[OutputDataCache<br/>解析 metadata.json<br/>建立 API 索引]
+
+        B --> B1 --> B2
+    end
+
+    subgraph "前端消費層"
+        C[iOS App<br/>audio-earning-ios<br/><br/>SwiftUI + MVVM]
+
+        C1[📚 書籍/章節瀏覽<br/>6h 快取 TTL]
+        C2[🎧 播放器<br/>AVPlayer + 波形]
+        C3[📝 字幕翻譯<br/>詞級高亮]
+        C4[💾 批次下載<br/>離線使用]
+
+        C --> C1
+        C --> C2
+        C --> C3
+        C --> C4
+    end
+
+    OUTPUT -.->|sync_output.sh<br/>rsync 上傳| GCS
+    GCS -.->|冷啟動同步<br/>僅下載 .json| B1
+
+    B2 -->|REST API<br/>/books<br/>/chapters<br/>/audio ➜ 307<br/>/subtitles ➜ 307| C
+
+    GCS -.->|307 轉址<br/>公開 URL<br/>gcs-public mode| C
+
+    style A1 fill:#e3f2fd
+    style A2 fill:#e3f2fd
+    style OUTPUT fill:#fff9c4
+    style GCS fill:#f3e5f5
+    style B fill:#fff3e0
+    style C fill:#e8f5e9
