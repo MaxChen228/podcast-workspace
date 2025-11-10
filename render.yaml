@@ -74,7 +74,7 @@ services:
   - type: worker
     name: storytelling-worker
     env: docker
-    plan: starter
+    plan: free
     region: singapore
     rootDir: backend
     dockerfilePath: ./Dockerfile
