@@ -79,7 +79,7 @@ services:
     rootDir: backend
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    startCommand: python -m server.app.workers.podcast_job_worker
+    dockerCommand: python -m server.app.workers.podcast_job_worker
 
     envVars:
       - key: DATA_ROOT
