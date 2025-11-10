@@ -27,6 +27,7 @@ from .schemas import (
     PodcastJobCreateRequest,
     PodcastJobResponse,
     PodcastJobListResponse,
+    PodcastJobStatus,
     NewsHeadlineResponse,
     NewsInteraction,
     NewsSearchResponse,
