@@ -25,7 +25,9 @@ def _resolve_path(raw: str) -> Path:
 class ServerSettings:
     """Settings object populated from environment variables."""
 
-    project_root: Path = field(default_factory=lambda: _resolve_path("."))
+    project_root: Path = field(
+        default_factory=lambda: _resolve_path((os.getenv("PROJECT_ROOT") or ".").strip())
+    )
     data_root: Path = field(default_factory=lambda: _resolve_path("output"))
     data_root_raw: str = "output"
     database_url: Optional[str] = None
@@ -55,7 +57,8 @@ class ServerSettings:
     def load(cls) -> "ServerSettings":
         load_dotenv()
 
-        project_root = _resolve_path(".")
+        project_root_raw = os.getenv("PROJECT_ROOT", ".").strip()
+        project_root = _resolve_path(project_root_raw)
         data_root_raw = os.getenv("DATA_ROOT", "output")
         if data_root_raw.startswith("gs://"):
             cache_root = os.getenv("STORYTELLING_GCS_CACHE_DIR", "/tmp/storytelling-output")

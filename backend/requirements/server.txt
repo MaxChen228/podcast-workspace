@@ -14,6 +14,8 @@ google-cloud-storage>=2.16.0
 
 # Gemini APIs for sentence explanations
 google-genai>=1.2.0
+google-generativeai>=0.8.5
+absl-py>=2.0.0
 
 # 共享工具（從 core.txt 必需的部分）
 python-dotenv>=1.0.0
@@ -25,3 +27,5 @@ alembic>=1.13.2
 psycopg[binary]>=3.1.12
 redis>=5.0.0
 pydub>=0.25.1
+PyPDF2>=3.0.0
+beautifulsoup4>=4.12.0

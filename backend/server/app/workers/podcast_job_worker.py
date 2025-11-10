@@ -223,12 +223,20 @@ class PodcastJobWorker:
         ]
         if payload.get("create_book", False):
             cmd.append("--create-book")
-        subprocess.run(cmd, cwd=self.story_cli_dir, check=True)
+        env = os.environ.copy()
+        env["OUTPUT_ROOT"] = str(self.output_root)
+        env["DATA_ROOT"] = str(self.settings.data_root)
+        subprocess.run(cmd, cwd=self.story_cli_dir, check=True, env=env)
 
-        chapter_dir = self.output_root / book_id / chapter_id
-        if not chapter_dir.exists():
-            raise FileNotFoundError(f"Expected chapter directory missing: {chapter_dir}")
-        return chapter_dir
+        cli_output_dir = self.story_cli_dir / "output" / book_id / chapter_id
+        target_dir = self.output_root / book_id / chapter_id
+        if cli_output_dir.exists():
+            target_dir.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(["cp", "-R", str(cli_output_dir) + "/.", str(target_dir)], check=True)
+
+        if not target_dir.exists():
+            raise FileNotFoundError(f"Expected chapter directory missing: {target_dir}")
+        return target_dir
 
     def _load_generate_script_module(self):
         if self._generate_script_module is None:
