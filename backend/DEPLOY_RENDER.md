@@ -79,6 +79,9 @@ git push origin main
    | `NEWSDATA_API_KEY` | `your_newsdata_io_api_key`（僅在上列啟用時必填） |
    | `NEWSDATA_DEFAULT_LANGUAGE` | `en`（預設語言，可選） |
    | `NEWSDATA_DEFAULT_COUNTRY` | `us`（預設國家，可選） |
+   | `NEWS_EVENTS_DIR` | `/tmp/news_events` 或 `logs/news_events`（需容器具寫入權限） |
+   | `NEWS_CATEGORY_WHITELIST` | `technology,business`（空字串表示全部分類） |
+   | `NEWS_CACHE_TTL_SECONDS` | `900`（避免打爆 NewsData.io 免費配額） |
 
 4. 點選 **"Save Changes"**
 
@@ -126,6 +129,29 @@ curl https://storytelling-backend.onrender.com/books
 # 3. 測試特定書籍
 curl https://storytelling-backend.onrender.com/books/Foundation/chapters
 # 預期輸出：Foundation 章節列表
+
+# 4. 測試新聞端點（啟用時）
+curl "https://storytelling-backend.onrender.com/news/headlines?category=technology&count=3"
+# 預期輸出：包含 articles 陣列的 JSON（若 503 表示尚未啟用）
+
+### 進階：建立 Background Worker 服務
+
+若要讓前端可以發佈 Podcast 生成任務，還需要在 Render 建立一個 Worker：
+
+1. 在 `render.yaml` 或 Render Dashboard 新增 **Worker Service**，rootDir 指向 `backend`。建議設定：
+   - `buildCommand`: `pip install -r requirements/server.txt`
+   - `startCommand`: `python -m server.app.workers.podcast_job_worker`
+2. 在 Worker 環境變數中填入與 Web 相同的敏感設定（`DATABASE_URL`, `QUEUE_URL`, `PODCAST_JOB_QUEUE_NAME`, `GEMINI_API_KEY`, `GOOGLE_APPLICATION_CREDENTIALS`, GCS 相關變數）。
+3. Worker 會從 Redis 佇列取出 `PodcastJob`，呼叫 `gemini-2-podcast` 產生腳本/音訊，再透過 `storytelling-cli/scripts/import_gemini_dialogue.py` 匯入 `output/<book>/<chapter>`，API 即可讀取最新章節。
+
+> 沒有啟動 Worker 的情況下，`POST /podcasts/jobs` 只會排隊，不會真正產生內容。
+
+### NewsData.io 配額小抄
+
+- 免費層每日 200 credits，`count=10` 的 headlines/search 約消耗 10 credits。
+- 後端 `NEWS_CACHE_TTL_SECONDS` 預設 900 秒，可減少重複請求；若流量大建議調長。
+- Render Logs 中出現 `NewsAPIError rate limit exceeded` 代表當日配額用盡，可改用付費 key 或調整 `count`/快取。
+- `NEWS_EVENTS_DIR` 檔案會持續成長，若掛在 `/tmp` 記得加上 rotate 或定期同步到持久儲存。
 
 ## 🔥 設定保持溫暖（避免冷啟動）
 

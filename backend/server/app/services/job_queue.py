@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import redis
 
@@ -24,6 +24,17 @@ class PodcastJobQueue:
         body = json.dumps({"job_id": job_id, "payload": payload})
         logger.info("Enqueue podcast job %s", job_id)
         self._client.rpush(self.queue_name, body)
+
+    def dequeue(self, timeout: int = 5) -> Optional[Dict[str, Any]]:
+        item = self._client.blpop(self.queue_name, timeout=timeout)
+        if not item:
+            return None
+        _, data = item
+        try:
+            return json.loads(data.decode("utf-8"))
+        except json.JSONDecodeError:
+            logger.error("Failed to decode queue payload: %s", data)
+            return None
 
 
 class NullPodcastJobQueue:

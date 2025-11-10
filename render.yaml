@@ -70,3 +70,36 @@ services:
       # GEMINI_API_KEY - 在 Dashboard Environment 頁面手動加入
       # NEWSDATA_API_KEY - 在 Dashboard Environment 頁面手動加入（NewsData.io API 金鑰）
       # GOOGLE_APPLICATION_CREDENTIALS - 在 Dashboard Secret Files 上傳 JSON 後設為 /etc/secrets/gcs-service-account.json
+
+  - type: worker
+    name: storytelling-worker
+    env: docker
+    plan: starter
+    region: singapore
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    startCommand: python -m server.app.workers.podcast_job_worker
+
+    envVars:
+      - key: DATA_ROOT
+        value: gs://storytelling-output/output
+      - key: STORYTELLING_GCS_CACHE_DIR
+        value: /tmp/storytelling-output
+      - key: MEDIA_DELIVERY_MODE
+        value: gcs-public
+      - key: GCS_MIRROR_INCLUDE_SUFFIXES
+        value: .json
+      - key: SENTENCE_EXPLAINER_MODEL
+        value: gemini-2.5-flash-lite
+      - key: SENTENCE_EXPLAINER_TIMEOUT
+        value: 30
+      - key: SENTENCE_EXPLAINER_CACHE_SIZE
+        value: 128
+      - key: NEWS_FEATURE_ENABLED
+        value: "0"
+      - key: PODCAST_JOB_QUEUE_NAME
+        value: podcast_jobs
+
+    # 敏感資訊同樣需要在 Render Dashboard 上設定：
+    # - DATABASE_URL / GEMINI_API_KEY / QUEUE_URL / GOOGLE_APPLICATION_CREDENTIALS 等

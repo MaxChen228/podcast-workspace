@@ -141,6 +141,7 @@ class PodcastJobCreateRequest(BaseModel):
     title: str = Field(..., min_length=3, max_length=256)
     notes: Optional[str] = Field(default=None, max_length=500)
     requested_by: Optional[str] = Field(default=None, max_length=128)
+    create_book: bool = Field(default=False, description="If true, auto-create book metadata when missing")
 
 
 class PodcastJobResponse(BaseModel):
