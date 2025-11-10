@@ -180,6 +180,8 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 - [backend](../backend/) - FastAPI 服務（提供 API 供前端使用）
 - [audio-earning-ios](../audio-earning-ios/) - iOS 播放器應用
 
+> ℹ️ 新聞閱讀功能完全由 backend + iOS 實作，CLI 不會產生或同步任何 NewsData.io 內容，避免誤以為需要額外腳本。
+
 ## 許可證
 
 MIT License

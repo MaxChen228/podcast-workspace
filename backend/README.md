@@ -155,7 +155,18 @@ export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
 
 **免費層級限制：**
 - 200 credits/天（約 2000 篇文章）
-- 最多 10 篇文章/請求
+- 最多 10 篇文章/請求（`NEWS_MAX_COUNT` 預設 10）
+
+**啟用清單：**
+
+| 必填 | 內容 |
+|------|------|
+| ✅ `NEWS_FEATURE_ENABLED` | 設為 `1` 或 `true` 即可載入新聞服務 |
+| ✅ `NEWSDATA_API_KEY` | 從 NewsData.io Dashboard 取得，建議儲存在 Render Environment |
+| ✅ `NEWS_EVENTS_DIR` | JSONL 寫入目錄；容器需具備寫入權限（預設 `logs/news_events`） |
+| ⚙️ `NEWSDATA_DEFAULT_LANGUAGE/COUNTRY` | 控制預設市場（ex: `en` / `us`） |
+| ⚙️ `NEWS_CATEGORY_WHITELIST` | 限縮允許的分類；空字串代表全部 |
+| ⚙️ `NEWS_CACHE_TTL_SECONDS` | 後端快取時間（預設 900 秒，對應 NewsData 限額） |
 
 **使用範例：**
 
@@ -168,9 +179,19 @@ export NEWSDATA_API_KEY=your_api_key
 export NEWSDATA_DEFAULT_LANGUAGE=en
 export NEWSDATA_DEFAULT_COUNTRY=us
 
-# 可選：限制分類
+# 可選：限制分類 + 調整快取
 export NEWS_CATEGORY_WHITELIST=technology,business
+export NEWS_CACHE_TTL_SECONDS=900
 ```
+
+**錯誤碼對照：**
+
+| HTTP 狀態 | 常見原因 | 排除建議 |
+|-----------|----------|-----------|
+| `400 Bad Request` | category 不在白名單、`count < 1`、`q` 為空 | 檢查 `NEWS_CATEGORY_WHITELIST` 與查詢參數 |
+| `502 Bad Gateway` | NewsData.io 無回應或被速率限制 | 查看後端日誌中的 `NewsAPIError`，稍後重試或升級額度 |
+| `503 Service Unavailable` | `NEWS_FEATURE_ENABLED` 為關閉、缺少 API Key、`NewsService` 初始化失敗 | 確認環境變數、Render secret file 及網路連線 |
+| `5xx` 其他 | GCS 快取或外部依賴出錯 | 搭配 `/debug/gcs` 與 `logs/news_events` 進一步調查 |
 
 ## 項目結構
 

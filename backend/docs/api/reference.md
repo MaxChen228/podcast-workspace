@@ -510,6 +510,17 @@ GET /news/headlines?category=technology&count=5&market=en-US
 }
 ```
 
+**測試指令**
+
+```bash
+curl -s "${BASE_URL}/news/headlines?category=technology&market=en-US&count=3" | jq '.articles[].title'
+```
+
+**備註**
+- 後端快取時間由 `NEWS_CACHE_TTL_SECONDS` 控制，預設 900 秒，可降低 NewsData.io 配額消耗。
+- 當 `NEWS_CATEGORY_WHITELIST` 設定非空時，若傳入未允許的分類會回傳 400。
+- `market=en-US` 會拆成 `language=en`、`country=us` 傳給 NewsData。
+
 **錯誤碼**
 
 | 狀態碼 | 描述 |
@@ -532,6 +543,13 @@ GET /news/search?q=openai&market=en-US&count=10
 | `market`, `count` | 與 `/news/headlines` 相同。|
 
 回應格式同上，額外包含 `"query": "openai"` 欄位。
+
+```bash
+curl -s "${BASE_URL}/news/search?q=openai&market=en-GB&count=5" | jq '.articles | length'
+```
+
+- 搜尋結果不會寫入 `category`，但仍會套用 `market/count` 參數。
+- 若 `q` 為空或只含空白會回傳 400。
 
 ---
 
@@ -560,6 +578,11 @@ Content-Type: application/json
   "status": "accepted"
 }
 ```
+
+**備註**
+- 後端會將 payload enriched 後寫入 `NEWS_EVENTS_DIR`（預設 `backend/logs/news_events/YYYY-MM-DD.jsonl`）。
+- JSONL 可後續匯入 BigQuery / Looker 作為個人化模型訓練資料。
+- 回傳 202 表示僅為 best-effort logging；前端不需重試寫入成功的事件。
 
 **錯誤碼**
 

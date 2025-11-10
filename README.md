@@ -279,6 +279,18 @@ podcast-workspace/                 # Monorepo 根目錄
 - ✅ **數據累積** - `POST /news/events` 在 Render 上記錄用戶互動，為之後個人化推薦預先蒐集素材。
 - ✅ **免費額度** - 每天 200 credits（約 2000 篇文章），無需信用卡即可註冊使用。
 
+#### 啟用條件
+- `NEWS_FEATURE_ENABLED=1` 與 `NEWSDATA_API_KEY`（必填）
+- 選配：`NEWSDATA_DEFAULT_LANGUAGE`, `NEWSDATA_DEFAULT_COUNTRY`, `NEWS_CATEGORY_WHITELIST`
+- 寫入權限的 `NEWS_EVENTS_DIR`（預設 `backend/logs/news_events`）以存放 JSONL 互動紀錄
+- Render Secret File：`GOOGLE_APPLICATION_CREDENTIALS=/etc/secrets/gcs-service-account.json`
+
+#### 運作流程
+1. iOS App `NewsFeedView` 透過 `NewsService` 發送 `GET /news/headlines` 或 `/news/search`。
+2. FastAPI 後端將請求代理到 NewsData.io，套用 market/category 篩選並快取 15 分鐘，減少配額消耗。
+3. App 內操作（開啟、分享、收藏）會以 `POST /news/events` 回報，後端 `NewsEventLogger` 會把 enriched payload 寫入 `NEWS_EVENTS_DIR` 供離線分析。
+4. 若 Render 或 NewsData.io 發出錯誤，前端會顯示對應提示並提供重新整理。詳見 [新聞閱讀整合指南](docs/news-reading.md)。
+
 ---
 
 ## 🛠 技術棧
@@ -307,6 +319,9 @@ podcast-workspace/                 # Monorepo 根目錄
 - [系統架構](backend/docs/development/architecture.md)
 - [iOS 架構設計](audio-earning-ios/docs/architecture.md)
 - [API 參考文檔](backend/docs/api/reference.md)
+
+### 功能特化
+- [新聞閱讀整合指南](docs/news-reading.md)
 
 ### 運維人員
 - [Render 部署指南](backend/DEPLOY_RENDER.md)

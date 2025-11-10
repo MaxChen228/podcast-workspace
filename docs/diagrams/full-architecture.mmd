@@ -29,23 +29,30 @@ graph TB
     end
 
     subgraph "前端消費層"
-        C[iOS App<br/>audio-earning-ios<br/><br/>SwiftUI + MVVM]
+        C[iOS App<br/>audio-earning-ios<br/><br/>SwiftUI + MVVM + DependencyContainer]
 
-        C1[📚 書籍/章節瀏覽<br/>6h 快取 TTL]
+        C1[📚 書城/書庫瀏覽<br/>6h 快取 TTL]
         C2[🎧 播放器<br/>AVPlayer + 波形]
-        C3[📝 字幕翻譯<br/>詞級高亮]
+        C3[📝 字幕/翻譯/解釋<br/>詞級高亮]
         C4[💾 批次下載<br/>離線使用]
+        C5[🔧 伺服器設定<br/>多端點 + GET /health]
+        C6[🗂️ JSON 導出/匯入<br/>備份 + 匯入覆蓋]
+        C7[🗞️ 新聞牆/搜尋<br/>NewsService + 快取]
 
         C --> C1
         C --> C2
         C --> C3
         C --> C4
+        C --> C5
+        C --> C6
+        C --> C7
     end
 
     OUTPUT -.->|sync_output.sh<br/>上傳所有文件| GCS
     GCS -.->|冷啟動同步<br/>僅下載 .json metadata| B1
 
-    B2 -->|REST API<br/>GET /books<br/>GET /books/ID/chapters<br/>GET /audio - 307<br/>GET /subtitles - 307| C
+    B2 -->|Content + Settings API<br/>GET /health<br/>GET /books<br/>GET /books/{id}/chapters<br/>GET /chapters/{id} (播放)| C
+    B -->|Interactive API<br/>POST /translations<br/>POST /explain/{sentence,phrase}<br/>/news/headlines/search/events| C
 
     GCS -.->|gcs-public 模式<br/>HTTP 307 轉址<br/>storage.googleapis.com| C
 

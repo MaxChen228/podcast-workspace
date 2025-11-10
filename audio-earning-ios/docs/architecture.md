@@ -170,6 +170,14 @@ sequenceDiagram
 3. `ChapterPlayerViewModel`／`AudioPlayerViewModel` 取得 `ChapterPlaybackResponse`，交給 `AudioPlaybackController` 管理 `AVPlayer`，並透過 `PlaybackProgressTracker` 與 `ListeningProgressStore` 更新進度。
 4. 翻譯／句子解釋流程呼叫 `APIService.translateSentence` / `explainSentence`，結果快取在 ViewModel（已翻資料會標示 `cached`）。
 
+## 新聞資料流
+
+1. 使用者開啟「新聞」分頁時，`NewsFeedViewModel.loadIfNeeded()` 從 `NewsPreferenceStore` 讀取上次選擇的分類與 `market`。
+2. ViewModel 透過 `NewsService.fetchHeadlines` 呼叫 `/news/headlines`，若 actor 快取未過期會直接回傳，否則向後端重新抓取並更新 `lastUpdatedAt`。
+3. 搜尋時改呼叫 `/news/search?q=...`，結果會被標記 `isShowingSearchResults=true` 以更新 UI 標題。
+4. 使用者點擊、分享、收藏時會組出 `NewsEventPayload`，`NewsService.log` 以 `POST /news/events` 在背景回報；即使 Render 返回非 2xx 也不阻塞 UI。
+5. 後端 `NewsService` 會依 `NEWS_CACHE_TTL_SECONDS` 與 `NEWS_CATEGORY_WHITELIST` 管控配額，`NewsEventLogger` 則把 enriched payload 寫入 `NEWS_EVENTS_DIR`。
+
 ## 播放與字幕管線
 
 ```mermaid

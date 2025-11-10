@@ -1,0 +1,17 @@
+graph TD
+    A[ iOS / 前端 ] -->|POST /podcasts/jobs| B[FastAPI Web<br/>Render Web Service]
+    B -->|寫入| C[(Render Postgres<br/>podcast_jobs 表)]
+    B -->|enqueue job_id| D[(Render Redis / KV Queue)]
+    subgraph Render 資源
+        B
+        C
+        D
+        E[Background Worker<br/>python -m worker.podcast_jobs]
+    end
+    E -->|BLPOP job_id| D
+    E -->|更新狀態 + logs| C
+    E -->|subprocess| F[gemini-2-podcast/generate_podcast.py]
+    E -->|import| G[output/<book>/<chapter>]
+    G -->|gsutil rsync| H[GCS bucket]
+    A -->|GET /podcasts/jobs/&#123;id&#125;| B
+    A -->|播放| H
