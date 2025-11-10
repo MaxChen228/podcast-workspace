@@ -21,6 +21,8 @@ from .news_service import (
     NewsAPIError,
     NewsConfigurationError,
 )
+from .podcast_jobs import PodcastJobRepository
+from .job_queue import PodcastJobQueue, NullPodcastJobQueue
 
 __all__ = [
     "BookData",
@@ -38,4 +40,7 @@ __all__ = [
     "NewsValidationError",
     "NewsAPIError",
     "NewsConfigurationError",
+    "PodcastJobRepository",
+    "PodcastJobQueue",
+    "NullPodcastJobQueue",
 ]

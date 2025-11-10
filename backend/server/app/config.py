@@ -28,6 +28,9 @@ class ServerSettings:
     project_root: Path = field(default_factory=lambda: _resolve_path("."))
     data_root: Path = field(default_factory=lambda: _resolve_path("output"))
     data_root_raw: str = "output"
+    database_url: Optional[str] = None
+    queue_url: Optional[str] = None
+    job_queue_name: str = "podcast_jobs"
     cors_origins: List[str] = field(default_factory=list)
     gzip_min_size: int = 512
     sentence_explainer_model: str = "gemini-2.5-flash-lite"
@@ -62,7 +65,10 @@ class ServerSettings:
 
         cors_raw = os.getenv("CORS_ORIGINS", "")
         cors_origins = [origin.strip() for origin in cors_raw.split(",") if origin.strip()]
+        database_url = os.getenv("DATABASE_URL") or None
         gzip_min_size = int(os.getenv("GZIP_MIN_SIZE", "512"))
+        queue_url = os.getenv("QUEUE_URL") or os.getenv("PODCAST_JOB_QUEUE_URL") or None
+        job_queue_name = os.getenv("PODCAST_JOB_QUEUE_NAME", "podcast_jobs")
         sentence_explainer_model = os.getenv("SENTENCE_EXPLAINER_MODEL", "gemini-2.5-flash-lite")
         sentence_explainer_timeout = float(os.getenv("SENTENCE_EXPLAINER_TIMEOUT", "30"))
         sentence_explainer_cache_size = int(os.getenv("SENTENCE_EXPLAINER_CACHE_SIZE", "128"))
@@ -102,6 +108,9 @@ class ServerSettings:
             project_root=project_root,
             data_root=data_root,
             data_root_raw=data_root_raw,
+            database_url=database_url,
+            queue_url=queue_url,
+            job_queue_name=job_queue_name,
             cors_origins=cors_origins,
             gzip_min_size=gzip_min_size,
             sentence_explainer_model=sentence_explainer_model,

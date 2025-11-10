@@ -59,6 +59,12 @@ services:
         value: 10
 
       # ==========================================
+      # Podcast Job Queue 設定
+      # ==========================================
+      - key: PODCAST_JOB_QUEUE_NAME
+        value: podcast_jobs
+
+      # ==========================================
       # 敏感資訊（需在 Render Dashboard 手動設定）
       # ==========================================
       # GEMINI_API_KEY - 在 Dashboard Environment 頁面手動加入

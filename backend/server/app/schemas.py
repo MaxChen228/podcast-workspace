@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -119,3 +121,40 @@ class NewsInteraction(BaseModel):
     client_ts: Optional[str] = None
     device_locale: Optional[str] = None
     market: Optional[str] = None
+
+
+class PodcastJobStatus(str, Enum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+
+
+class PodcastJobCreateRequest(BaseModel):
+    """請求建立新的 Podcast 生成任務。"""
+
+    source_type: Literal["url", "pdf", "markdown", "text"] = "url"
+    source_value: str = Field(..., min_length=1)
+    language: str = Field("English", min_length=2, max_length=32)
+    book_id: str = Field(..., min_length=2, max_length=128)
+    chapter_id: str = Field(..., min_length=2, max_length=128)
+    title: str = Field(..., min_length=3, max_length=256)
+    notes: Optional[str] = Field(default=None, max_length=500)
+    requested_by: Optional[str] = Field(default=None, max_length=128)
+
+
+class PodcastJobResponse(BaseModel):
+    """回傳 Podcast 任務狀態。"""
+
+    id: str
+    status: PodcastJobStatus
+    requested_by: Optional[str] = None
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    result_paths: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
+    progress: Optional[int] = None
+    log_excerpt: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)

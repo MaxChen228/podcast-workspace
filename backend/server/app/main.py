@@ -18,11 +18,14 @@ from fastapi.responses import PlainTextResponse, StreamingResponse
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from .config import ServerSettings
+from .db.session import get_sessionmaker
 from .schemas import (
     AssetList,
     BookItem,
     ChapterItem,
     ChapterPlayback,
+    PodcastJobCreateRequest,
+    PodcastJobResponse,
     NewsHeadlineResponse,
     NewsInteraction,
     NewsSearchResponse,
@@ -41,6 +44,9 @@ from .services import (
     NewsServiceError,
     NewsValidationError,
     OutputDataCache,
+    PodcastJobRepository,
+    PodcastJobQueue,
+    NullPodcastJobQueue,
     SentenceExplanationError,
     SentenceExplanationResult,
     SentenceExplanationService,
@@ -95,6 +101,17 @@ def create_app(settings: Optional[ServerSettings] = None) -> FastAPI:
     mirror: Optional[GCSMirror] = None
     download_suffixes: Optional[set[str]] = None
     cache_relevant_suffixes: Optional[set[str]] = None
+    sessionmaker_obj = None
+    job_queue = None
+
+    if settings.database_url:
+        try:
+            sessionmaker_obj = get_sessionmaker(settings.database_url)
+        except Exception as exc:  # pragma: no cover - config error path
+            logger.exception("Failed to initialize database engine: %s", exc)
+            raise
+    else:
+        logger.warning("DATABASE_URL not configured; podcast job APIs will be disabled")
 
     if is_gcs_uri(settings.data_root_raw):
         # 診斷日誌：檢查 GCS 配置
@@ -193,6 +210,17 @@ def create_app(settings: Optional[ServerSettings] = None) -> FastAPI:
     app.state.gcs_mirror = mirror
     app.state.news_service = news_service
     app.state.news_event_logger = news_logger
+    app.state.db_sessionmaker = sessionmaker_obj
+
+    if settings.queue_url and settings.job_queue_name:
+        try:
+            job_queue = PodcastJobQueue(settings.queue_url, settings.job_queue_name)
+        except Exception as exc:  # pragma: no cover - config error path
+            logger.exception("Failed to connect to podcast job queue: %s", exc)
+            job_queue = NullPodcastJobQueue()
+    else:
+        job_queue = NullPodcastJobQueue()
+    app.state.job_queue = job_queue
 
     if settings.cors_origins:
         logger.info("Configuring CORS for origins: %s", settings.cors_origins)
@@ -245,6 +273,40 @@ def _register_routes(app: FastAPI) -> None:
     @app.get("/health")
     async def health_check() -> dict[str, str]:
         return {"status": "ok"}
+
+    def _require_sessionmaker():
+        maker = getattr(app.state, "db_sessionmaker", None)
+        if maker is None:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database not configured")
+        return maker
+
+    @app.post("/podcasts/jobs", response_model=PodcastJobResponse, status_code=status.HTTP_201_CREATED)
+    async def create_podcast_job(payload: PodcastJobCreateRequest) -> PodcastJobResponse:
+        maker = _require_sessionmaker()
+        job_payload = payload.model_dump(exclude={"requested_by"})
+        with maker() as session:
+            repo = PodcastJobRepository(session)
+            job = repo.create_job(payload=job_payload, requested_by=payload.requested_by)
+            session.commit()
+
+        job_queue = getattr(app.state, "job_queue", None)
+        try:
+            if job_queue:
+                job_queue.enqueue(job.id, job.payload)
+        except Exception as exc:  # pragma: no cover - queue failure path
+            logger.exception("Failed to enqueue podcast job %s: %s", job.id, exc)
+
+        return PodcastJobResponse.model_validate(job)
+
+    @app.get("/podcasts/jobs/{job_id}", response_model=PodcastJobResponse)
+    async def get_podcast_job(job_id: str) -> PodcastJobResponse:
+        maker = _require_sessionmaker()
+        with maker() as session:
+            repo = PodcastJobRepository(session)
+            job = repo.get_job(job_id)
+            if not job:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+            return PodcastJobResponse.model_validate(job)
 
     @app.get("/news/headlines", response_model=NewsHeadlineResponse)
     async def news_headlines(
