@@ -19,13 +19,18 @@ graph TB
         GCS[Google Cloud Storage<br/>gs://storytelling-output/output<br/><br/>📦 完整存儲所有內容<br/>🎵 音訊 .mp3 數百 MB<br/>📝 字幕 .srt<br/>📄 腳本 + metadata .json]
     end
 
-    subgraph "API 服務層 (Render Deployment)"
-        B[FastAPI Server<br/>GitHub: podcast-workspace<br/>rootDir: backend<br/><br/>🔹 不生成內容<br/>🔹 掃描 GCS 遠程數據<br/>🔹 建立書籍/章節索引<br/>🔹 Starter Plan @ Singapore]
+    subgraph "API 與任務層 (Render Deployment)"
+        B[FastAPI Server<br/>backend/<br/>REST API + PodcastJob]
 
-        B1[GCSMirror<br/>冷啟動同步 .json 到本地<br/>/tmp/storytelling-output<br/>節省記憶體與啟動時間]
+        B1[GCSMirror<br/>冷啟動同步 .json 到本地<br/>/tmp/storytelling-output]
         B2[OutputDataCache<br/>解析 metadata.json<br/>建立 API 索引]
+        R[Redis Queue<br/>podcast-job-queue]
+        W[Podcast Job Worker<br/>python -m server.app.workers...<br/>（本地或 Render Worker）]
 
         B --> B1 --> B2
+        B -->|POST /podcasts/jobs| R
+        W -->|BLPOP| R
+        W --> OUTPUT
     end
 
     subgraph "前端消費層"

@@ -50,6 +50,54 @@ docker run -p 8000:8000 \
   storytelling-api
 ```
 
+## Podcast 生成任務與 Worker
+
+Web API 只負責排程，實際生成由 `podcast_job_worker` 執行。要啟動本地或自管機器上的 worker：
+
+```bash
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements/server.txt
+
+cat <<'ENV' > .env
+PROJECT_ROOT=/path/to/podcast-workspace
+DATABASE_URL=postgresql+psycopg://<render-postgres-external>
+QUEUE_URL=redis://<render-redis-external>
+PODCAST_JOB_QUEUE_NAME=podcast_jobs
+OUTPUT_ROOT=/path/to/podcast-workspace/output
+DATA_ROOT=/path/to/podcast-workspace/output
+GEMINI_API_KEY=<your key>
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+ENV
+
+export $(grep -v '^#' .env | xargs)
+python -m server.app.workers.podcast_job_worker
+```
+
+Worker 會：
+1. 連線 Redis 佇列 (`QUEUE_URL`) 取出 `PodcastJob`。
+2. 呼叫 `gemini-2-podcast/generate_script.py` + `generate_audio.py`，產生腳本與音訊。
+3. 執行 `storytelling-cli/scripts/import_gemini_dialogue.py`，將輸出寫入共享 `output/<book>/<chapter>/`。
+4. 更新 Postgres 中 `podcast_jobs` 狀態，API 即可回傳 `succeeded/failed` 與結果路徑。
+
+POST 任務範例：
+
+```bash
+curl -X POST https://<render-host>/podcasts/jobs \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "source_type": "text",
+        "source_value": "Explain Rayleigh scattering...",
+        "language": "English",
+        "book_id": "gemini-demo",
+        "chapter_id": "chapter_cli_test",
+        "title": "CLI Generated Chapter",
+        "create_book": true
+      }'
+```
+
+使用 `GET /podcasts/jobs/{id}` 追蹤狀態（`queued → running → succeeded/failed`）。
+
 ## 環境變數配置
 
 ### 核心設定

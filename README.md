@@ -28,7 +28,7 @@
 
 ```mermaid
 graph TB
-    subgraph "內容生產層 (本地機器)"
+    subgraph "內容生產層 (本地機器/Worker)"
         A1[CLI 工具<br/>storytelling-cli/run.sh]
         A2[對話生成器<br/>gemini-2-podcast/]
 
@@ -46,8 +46,13 @@ graph TB
         GCS[Google Cloud Storage<br/>gs://storytelling-output/]
     end
 
-    subgraph "API 服務層 (Render)"
-        B[FastAPI Server<br/>backend/<br/>提供 REST API]
+    subgraph "API / 任務層 (Render)"
+        B[FastAPI Server<br/>backend/<br/>提供 REST API + PodcastJob]
+        Q[Redis Queue<br/>podcast-job-queue]
+        W[Podcast Job Worker<br/>python -m server.app.workers.podcast_job_worker<br/>（本地或雲端）]
+        B -->|POST /podcasts/jobs| Q
+        W -->|BLPOP| Q
+        W --> OUTPUT
     end
 
     subgraph "前端消費層"
@@ -56,7 +61,7 @@ graph TB
 
     OUTPUT -.->|scripts/sync_output.sh| GCS
     GCS -.->|GCSMirror| B
-    B -->|REST API| C
+    B -->|REST API + 任務查詢| C
     GCS -.->|307 轉址| C
 
     style A1 fill:#e3f2fd
@@ -64,6 +69,8 @@ graph TB
     style OUTPUT fill:#fff9c4
     style GCS fill:#f3e5f5
     style B fill:#fff3e0
+    style Q fill:#f8bbd0
+    style W fill:#e1bee7
     style C fill:#e8f5e9
 ```
 
@@ -149,6 +156,28 @@ cd gemini-2-podcast
 pip install -r requirements.txt
 python generate_podcast.py --language spanish
 ```
+
+## 🧵 API 觸發內容生成 (Render + 本地 Worker)
+
+1. **部署 Web API**：`backend/` 以 Render Web Service 執行，環境變數需包含 `DATABASE_URL`（Postgres）、`QUEUE_URL`（Redis/KeyValue）、`PODCAST_JOB_QUEUE_NAME`、`GEMINI_API_KEY` 等。
+2. **啟動 Podcast Job Worker**：在 monorepo 根目錄，建立 `backend/.env`，至少設定
+   - `PROJECT_ROOT=/path/to/podcast-workspace`
+   - `DATABASE_URL`（Render Postgres external URL）
+   - `QUEUE_URL`（Redis external URL）
+   - `PODCAST_JOB_QUEUE_NAME=podcast_jobs`
+   - `OUTPUT_ROOT`、`DATA_ROOT` 指向共享 `output/`
+
+   然後執行：
+
+   ```bash
+   cd backend
+   source .venv/bin/activate
+   export $(grep -v '^#' .env | xargs)
+   python -m server.app.workers.podcast_job_worker
+   ```
+
+   Worker 會從 Redis 佇列取出 `PodcastJob`，呼叫 `gemini-2-podcast` 生成腳本/音訊，再透過 `storytelling-cli/scripts/import_gemini_dialogue.py` 匯入 `output/<book>/<chapter>/`。
+3. **觸發任務**：對 Render API 呼叫 `POST /podcasts/jobs` 並附上來源、書籍/章節、語言、`create_book` 等參數。使用 `GET /podcasts/jobs/{id}` 追蹤狀態；當 `status=succeeded` 時，iOS 端即可即時讀取該章節。
 
 ---
 
