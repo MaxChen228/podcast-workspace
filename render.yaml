@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: storytelling-backend
+    name: podcast-backend
     env: docker
     plan: starter
     region: singapore  # 最近的區域（新加坡，延遲約 60ms）
@@ -72,7 +72,7 @@ services:
       # GOOGLE_APPLICATION_CREDENTIALS - 在 Dashboard Secret Files 上傳 JSON 後設為 /etc/secrets/gcs-service-account.json
 
   - type: worker
-    name: storytelling-worker
+    name: podcast-worker
     env: docker
     plan: free
     region: singapore
