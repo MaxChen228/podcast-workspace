@@ -26,6 +26,7 @@ from .schemas import (
     ChapterPlayback,
     PodcastJobCreateRequest,
     PodcastJobResponse,
+    PodcastJobListResponse,
     NewsHeadlineResponse,
     NewsInteraction,
     NewsSearchResponse,
@@ -297,6 +298,35 @@ def _register_routes(app: FastAPI) -> None:
             logger.exception("Failed to enqueue podcast job %s: %s", job.id, exc)
 
         return PodcastJobResponse.model_validate(job)
+
+    @app.get("/podcasts/jobs", response_model=PodcastJobListResponse)
+    async def list_podcast_jobs(
+        request: Request,
+        status: Optional[str] = Query(default=None, description="Comma-separated statuses"),
+        limit: int = Query(default=50, ge=1, le=200),
+        offset: int = Query(default=0, ge=0),
+    ) -> PodcastJobListResponse:
+        maker = _require_sessionmaker()
+        statuses: Optional[list[PodcastJobStatus]] = None
+        if status:
+            statuses = []
+            for raw in status.split(","):
+                raw_clean = raw.strip().lower()
+                if not raw_clean:
+                    continue
+                try:
+                    statuses.append(PodcastJobStatus(raw_clean))
+                except ValueError:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid status: {raw}")
+            if not statuses:
+                statuses = None
+        with maker() as session:
+            repo = PodcastJobRepository(session)
+            jobs, total = repo.list_jobs(status=statuses, limit=limit, offset=offset)
+            return PodcastJobListResponse(
+                items=[PodcastJobResponse.model_validate(job) for job in jobs],
+                total=total,
+            )
 
     @app.get("/podcasts/jobs/{job_id}", response_model=PodcastJobResponse)
     async def get_podcast_job(job_id: str) -> PodcastJobResponse:

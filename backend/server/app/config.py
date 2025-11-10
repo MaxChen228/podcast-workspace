@@ -11,6 +11,11 @@ from typing import List, Optional
 
 from dotenv import load_dotenv
 
+DEFAULT_SYNC_EXCLUDE_REGEX = (
+    r'(^|/)\\.DS_Store$|(^|/)\\.gitignore$|(^|/)\\.env$|'
+    r'(^|/)\\.pytest_cache($|/.*)|.*\\.wav$|.*\\.textgrid$'
+)
+
 
 def _resolve_path(raw: str) -> Path:
     """Resolves a potentially relative path against the project root."""
@@ -41,6 +46,8 @@ class ServerSettings:
     media_delivery_mode: str = "local"
     gcs_mirror_include_suffixes: Optional[List[str]] = None
     signed_url_ttl_seconds: int = 600
+    sync_bucket: Optional[str] = None
+    sync_exclude_regex: str = DEFAULT_SYNC_EXCLUDE_REGEX
     news_feature_enabled: bool = False
     newsdata_api_key: Optional[str] = None
     newsdata_endpoint: str = "https://newsdata.io/api/1/latest"
@@ -92,6 +99,8 @@ class ServerSettings:
         else:
             include_suffixes = None
         signed_url_ttl_seconds = max(60, int(os.getenv("SIGNED_URL_TTL_SECONDS", "600")))
+        sync_bucket = os.getenv("STORYTELLING_SYNC_BUCKET") or os.getenv("GCS_SYNC_BUCKET") or None
+        sync_exclude_regex = os.getenv("STORYTELLING_SYNC_EXCLUDE_REGEX", DEFAULT_SYNC_EXCLUDE_REGEX)
 
         news_feature_enabled = os.getenv("NEWS_FEATURE_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
         newsdata_api_key = os.getenv("NEWSDATA_API_KEY") or None
@@ -122,6 +131,8 @@ class ServerSettings:
             media_delivery_mode=media_delivery_mode,
             gcs_mirror_include_suffixes=include_suffixes,
             signed_url_ttl_seconds=signed_url_ttl_seconds,
+            sync_bucket=sync_bucket,
+            sync_exclude_regex=sync_exclude_regex,
             news_feature_enabled=news_feature_enabled,
             newsdata_api_key=newsdata_api_key,
             newsdata_endpoint=newsdata_endpoint,

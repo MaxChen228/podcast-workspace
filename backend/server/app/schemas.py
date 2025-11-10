@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, Literal, Optional, List
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -159,3 +159,8 @@ class PodcastJobResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class PodcastJobListResponse(BaseModel):
+    items: List[PodcastJobResponse] = Field(default_factory=list)
+    total: int

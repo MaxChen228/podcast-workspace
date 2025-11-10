@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 from sqlalchemy.orm import Session
 
@@ -30,6 +30,25 @@ class PodcastJobRepository:
 
     def get_job(self, job_id: str) -> Optional[PodcastJob]:
         return self.session.get(PodcastJob, job_id)
+
+    def list_jobs(
+        self,
+        *,
+        status: Optional[List[PodcastJobStatus]] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[list[PodcastJob], int]:
+        query = self.session.query(PodcastJob)
+        if status:
+            query = query.filter(PodcastJob.status.in_(status))
+        total = query.count()
+        rows = (
+            query.order_by(PodcastJob.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+        return rows, total
 
     def update_status(
         self,
