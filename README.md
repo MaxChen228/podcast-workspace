@@ -111,6 +111,7 @@ pip install -r requirements.txt
 # 配置環境變數
 cp .env.example .env
 # 編輯 .env 添加 GEMINI_API_KEY
+# 更多環境變數說明請參考 docs/env-matrix.md
 
 # 生成內容（互動式 CLI）
 ./run.sh
@@ -133,6 +134,7 @@ pip install -r requirements/server.txt
 # 配置環境變數
 cp .env.example .env
 # 編輯 .env 添加 GEMINI_API_KEY 和 GCS 設定
+# 詳細環境變數對照可見 docs/env-matrix.md
 
 # 啟動 API 服務
 uvicorn server.app.main:app --reload --host 0.0.0.0 --port 8000
