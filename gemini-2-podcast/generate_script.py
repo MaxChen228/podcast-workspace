@@ -1,5 +1,8 @@
 import os
 import re
+from datetime import datetime
+from typing import Optional
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,6 +21,18 @@ import google.generativeai as genai
 import PyPDF2
 import requests
 from bs4 import BeautifulSoup
+from newspaper import Article, Config
+from newspaper.article import ArticleException
+
+NEWS_USER_AGENT = os.getenv("NEWS_USER_AGENT", "gemini-2-podcast/1.0")
+NEWS_LANGUAGE_HINT = os.getenv("NEWS_LANGUAGE_HINT", "")
+NEWS_REQUEST_TIMEOUT = int(os.getenv("NEWS_REQUEST_TIMEOUT", "15"))
+
+_NEWSPAPER_CONFIG = Config()
+_NEWSPAPER_CONFIG.browser_user_agent = NEWS_USER_AGENT
+_NEWSPAPER_CONFIG.request_timeout = NEWS_REQUEST_TIMEOUT
+_NEWSPAPER_CONFIG.memoize_articles = False
+_HTTP_HEADERS = {"User-Agent": NEWS_USER_AGENT}
 
 # === Rest of your code ===
 def read_pdf(pdf_path):
@@ -48,18 +63,74 @@ def read_md(md_path):
         print(f"Error reading Markdown file: {str(e)}")
         return ""
 
-def read_url(url):
+def _format_publish_date(value) -> Optional[str]:
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if hasattr(value, "isoformat"):
+        try:
+            return value.isoformat()  # type: ignore[attr-defined]
+        except Exception:
+            pass
+    if value:
+        return str(value)
+    return None
+
+
+def _compose_article_payload(article: Article) -> str:
+    metadata = []
+    if article.title:
+        metadata.append(f"Title: {article.title.strip()}")
+    publish_date = _format_publish_date(article.publish_date)
+    if publish_date:
+        metadata.append(f"Published: {publish_date}")
+    if article.authors:
+        metadata.append(f"Authors: {', '.join(article.authors)}")
+    if article.meta_description:
+        metadata.append(f"Summary: {article.meta_description.strip()}")
+    if getattr(article, "summary", ""):
+        metadata.append(f"Key Points: {article.summary.strip()}")
+
+    body = article.text.strip()
+    if not body:
+        raise ValueError("Article text is empty after parsing")
+
+    metadata_block = "\n".join(metadata).strip()
+    return f"{metadata_block}\n\n{body}" if metadata_block else body
+
+
+def _basic_html_to_text(url: str) -> str:
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=NEWS_REQUEST_TIMEOUT, headers=_HTTP_HEADERS)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
-        return soup.get_text()
+        text = soup.get_text(separator='\n')
+        return text.strip()
     except requests.exceptions.RequestException as e:
-        print(f"Error accessing URL: {str(e)}")
+        print(f"Error accessing URL via fallback: {str(e)}")
         return ""
     except Exception as e:
-        print(f"Error processing URL content: {str(e)}")
+        print(f"Error processing URL content via fallback: {str(e)}")
         return ""
+
+
+def read_url(url):
+    language = NEWS_LANGUAGE_HINT or None
+    try:
+        article = Article(url, language=language, config=_NEWSPAPER_CONFIG)
+        article.download()
+        article.parse()
+        try:
+            article.nlp()
+        except LookupError as nlp_error:
+            # NLTK data might be missing; continue without NLP summary.
+            print(f"NLTK resource missing for URL {url}: {nlp_error}. Continuing without summary.")
+        return _compose_article_payload(article)
+    except (ArticleException, ValueError) as article_error:
+        print(f"Newspaper4k error for {url}: {article_error}. Falling back to simple scraper.")
+    except Exception as article_error:
+        print(f"Unexpected Newspaper4k error for {url}: {article_error}. Falling back to simple scraper.")
+
+    return _basic_html_to_text(url)
 
 def read_txt(txt_path):
     try:

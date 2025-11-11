@@ -47,6 +47,12 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+Download the NLTK corpora required by Newspaper4k (run once after installing dependencies):
+
+```bash
+python -m nltk.downloader punkt punkt_tab stopwords
+```
+
 ### Create `.env` File with API Keys:
 ```text
 GEMINI_API_KEY=your_gemini_api_key
@@ -54,6 +60,9 @@ VOICE_A=Puck
 VOICE_B=Kore
 TTS_MODEL_NAME=gemini-2.5-flash-tts        # optional override
 TTS_MAX_PROMPT_BYTES=3600                  # optional safety limit per batch
+NEWS_USER_AGENT="gemini-2-podcast/1.0"        # optional override for URL scraping
+NEWS_REQUEST_TIMEOUT=15                        # optional timeout (seconds)
+NEWS_LANGUAGE_HINT=en                          # optional hint for Newspaper4k parsing
 ```
 
 `VOICE_A` / `VOICE_B` must match the prebuilt voice names listed in the Gemini dashboard (e.g., `Puck`, `Kore`, `Charlie`).
@@ -129,3 +138,7 @@ This project is licensed under the MIT License.
 
 ## Acknowledgments
 - Inspired by NotebookLM's podcast feature.
+
+## News URL Extraction
+- URL 來源現在由 [Newspaper4k](https://github.com/AndyTheFactory/newspaper4k) 擔任主要擷取工具，可自動抓取標題、作者、發布日期與全文。
+- 如遇特定網站的反爬蟲限制，可調整 `.env` 中的 `NEWS_USER_AGENT` / `NEWS_REQUEST_TIMEOUT`，或退回內建的 BeautifulSoup 簡易解析模式。
