@@ -138,6 +138,12 @@ cp .env.example .env
 
 # 啟動 API 服務
 uvicorn server.app.main:app --reload --host 0.0.0.0 --port 8000
+
+# 或使用 backend.sh（自動載入 .env 並顯示區網 URL）
+./backend.sh
+
+# 啟動背景 Worker（處理 Podcast 任務）
+./worker.sh
 ```
 
 ### 4. iOS App 設置
