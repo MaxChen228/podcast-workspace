@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct NewsFeedView: View {
+    @Environment(\.dependencies) private var dependencies
     @StateObject var viewModel: NewsFeedViewModel
     @State private var presentedArticle: NewsArticle?
 
@@ -138,6 +139,14 @@ struct NewsFeedView: View {
                 Image(systemName: "arrow.clockwise")
             }
             .disabled(viewModel.isLoading)
+        }
+
+        ToolbarItem(placement: .navigationBarTrailing) {
+            NavigationLink {
+                PodcastJobView(viewModel: dependencies.makePodcastJobViewModel())
+            } label: {
+                Image(systemName: "plus.circle")
+            }
         }
     }
 }

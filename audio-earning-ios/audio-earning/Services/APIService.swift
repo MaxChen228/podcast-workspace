@@ -402,6 +402,56 @@ final class APIService {
         }
     }
 
+    func submitPodcastJob(_ payload: PodcastJobCreatePayload) async throws -> PodcastJob {
+        let url = APIConfiguration.shared.baseURL
+            .appendingPathComponent("podcasts")
+            .appendingPathComponent("jobs")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let encoder = JSONEncoder()
+        request.httpBody = try encoder.encode(payload)
+
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw APIServiceError.invalidResponse
+        }
+        guard 200..<300 ~= http.statusCode else {
+            throw APIServiceError.httpError(http.statusCode)
+        }
+
+        do {
+            return try makeDecoder().decode(PodcastJob.self, from: data)
+        } catch {
+            throw APIServiceError.decodingFailed
+        }
+    }
+
+    func fetchPodcastJobs(statuses: [PodcastJobStatus]?) async throws -> PodcastJobListResponse {
+        var components = URLComponents(url: APIConfiguration.shared.baseURL
+            .appendingPathComponent("podcasts")
+            .appendingPathComponent("jobs"), resolvingAgainstBaseURL: false)
+        if let statuses, !statuses.isEmpty {
+            let value = statuses.map { $0.rawValue }.joined(separator: ",")
+            components?.queryItems = [URLQueryItem(name: "status", value: value)]
+        }
+        guard let url = components?.url else {
+            throw APIServiceError.invalidURL
+        }
+        let (data, response) = try await session.data(from: url)
+        guard let http = response as? HTTPURLResponse else {
+            throw APIServiceError.invalidResponse
+        }
+        guard 200..<300 ~= http.statusCode else {
+            throw APIServiceError.httpError(http.statusCode)
+        }
+        do {
+            return try makeDecoder().decode(PodcastJobListResponse.self, from: data)
+        } catch {
+            throw APIServiceError.decodingFailed
+        }
+    }
+
     /// Remove all locally cached audio and subtitle files.
     @discardableResult
     func clearMediaCache() throws -> Int {
@@ -589,10 +639,16 @@ final class APIService {
         }
 
         do {
-            return try JSONDecoder().decode(T.self, from: data)
+            return try makeDecoder().decode(T.self, from: data)
         } catch {
             throw APIServiceError.decodingFailed
         }
+    }
+
+    private func makeDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
     }
 
     private func cachedFileURL(for remoteURL: URL) -> URL {

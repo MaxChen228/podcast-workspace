@@ -20,6 +20,7 @@ protocol DependencyResolving: AnyObject {
     @MainActor func makeBookCatalogViewModel() -> BookCatalogViewModel
     @MainActor func makeNewsFeedViewModel() -> NewsFeedViewModel
     @MainActor func makeBackendConfigurationViewModel() -> BackendConfigurationViewModel
+    @MainActor func makePodcastJobViewModel() -> PodcastJobViewModel
 }
 
 @MainActor
@@ -77,5 +78,10 @@ final class AppDependencyContainer: DependencyResolving, ObservableObject {
             service: apiService,
             backendStore: backendStore
         )
+    }
+
+    @MainActor
+    func makePodcastJobViewModel() -> PodcastJobViewModel {
+        PodcastJobViewModel(service: apiService)
     }
 }

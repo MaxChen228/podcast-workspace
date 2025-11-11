@@ -38,6 +38,9 @@ protocol APIServiceProtocol: AnyObject {
     func downloadSubtitles(from originalURL: URL) async throws -> SubtitleDownload
     @discardableResult
     func clearMediaCache() throws -> Int
+
+    func submitPodcastJob(_ payload: PodcastJobCreatePayload) async throws -> PodcastJob
+    func fetchPodcastJobs(statuses: [PodcastJobStatus]?) async throws -> PodcastJobListResponse
 }
 
 protocol NewsServiceProtocol: AnyObject {
