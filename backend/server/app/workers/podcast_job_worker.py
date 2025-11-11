@@ -16,8 +16,6 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-import httpx
-
 from ..config import ServerSettings
 from ..db.models.podcast_job import PodcastJobStatus
 from ..db.session import get_sessionmaker
@@ -138,7 +136,6 @@ class PodcastJobWorker:
         logger.info("Job %s completed", job_id)
 
     def _execute_pipeline(self, job_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        content = self._resolve_content(payload)
         language = payload.get("language", "English")
         book_id = payload.get("book_id", "gemini-demo")
         chapter_id = payload.get("chapter_id", f"chapter_{job_id[:8]}")
@@ -146,7 +143,7 @@ class PodcastJobWorker:
             chapter_id = f"chapter_{chapter_id}" if not chapter_id.startswith("chapter_") else chapter_id
         title = payload.get("title") or chapter_id
 
-        script_path = self._generate_script_file(content)
+        script_path = self._generate_script_file(payload)
         self._prepare_audio_instructions(language)
         self._run_audio_generation()
         chapter_dir = self._import_into_output(book_id, chapter_id, title, language, payload)
@@ -162,25 +159,32 @@ class PodcastJobWorker:
             "subtitles": str(subtitles_path) if subtitles_path else None,
         }
 
-    def _resolve_content(self, payload: Dict[str, Any]) -> str:
-        source_type = (payload.get("source_type") or "text").strip().lower()
-        source_value = payload.get("source_value") or ""
-        if not source_value:
-            raise ValueError("source_value is required")
-
-        if source_type in {"text", "markdown", "md"}:
-            return source_value
-        if source_type == "url":
-            response = httpx.get(source_value, timeout=30.0)
-            response.raise_for_status()
-            return response.text
-        raise ValueError(f"Unsupported source_type: {source_type}")
-
-    def _generate_script_file(self, content: str) -> Path:
+    def _generate_script_file(self, payload: Dict[str, Any]) -> Path:
         if not self.gemini_dir.exists():
             raise FileNotFoundError(f"Gemini project directory not found: {self.gemini_dir}")
 
         module = self._load_generate_script_module()
+        source_type = (payload.get("source_type") or "text").strip().lower()
+        source_value = payload.get("source_value") or ""
+
+        if source_type in {"text", "markdown", "md"}:
+            content = source_value
+        elif source_type == "url":
+            if not source_value:
+                raise ValueError("source_value is required for URL sources")
+            content = module.read_url(source_value)
+        elif source_type == "pdf":
+            content = module.read_pdf(Path(source_value))
+        elif source_type == "md":
+            content = module.read_md(Path(source_value))
+        elif source_type == "txt":
+            content = module.read_txt(Path(source_value))
+        else:
+            raise ValueError(f"Unsupported source_type: {source_type}")
+
+        if not content:
+            raise ValueError("Source content is empty; cannot generate script")
+
         with pushd(self.gemini_dir):
             script = module.create_podcast_script(content)
             if not script:
