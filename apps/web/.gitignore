@@ -1,0 +1,8 @@
+node_modules
+.DS_Store
+dist
+.vite
+.playwright-cache
+coverage
+.vscode
+.env*
