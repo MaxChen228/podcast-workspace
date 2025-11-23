@@ -1,6 +1,7 @@
 import type { BookItem, ChapterItem } from "../types/api";
+import { usePlayer } from "../providers/PlayerProvider";
 
-interface Props {
+interface BookDetailDrawerProps {
   book: BookItem;
   chapters?: ChapterItem[];
   isLoading: boolean;
@@ -20,51 +21,91 @@ export function BookDetailDrawer({
   isInLibrary,
   onToggleChapter,
   completedChapters,
-}: Props) {
+}: BookDetailDrawerProps) {
+  const { play, currentChapter, isPlaying, pause, resume } = usePlayer();
+
+  const handlePlay = (chapter: ChapterItem) => {
+    if (currentChapter?.id === chapter.id) {
+      if (isPlaying) pause();
+      else resume();
+    } else {
+      play(book, chapter);
+    }
+  };
+
   return (
-    <aside className="drawer" aria-label={`章節 - ${book.title}`}>
-      <div className="drawer-header">
-        <div>
-          <p className="drawer-label">書籍</p>
+    <div className="drawer-overlay" onClick={onClose}>
+      <div className="drawer" onClick={(e) => e.stopPropagation()}>
+        <header className="drawer-header">
           <h2>{book.title}</h2>
+          <button className="ghost" onClick={onClose}>
+            關閉
+          </button>
+        </header>
+
+        <div className="drawer-content">
+          <div className="book-info">
+            {book.cover_url && (
+              <img src={book.cover_url} alt={book.title} className="book-cover-large" />
+            )}
+            <div className="actions">
+              <button className="primary" onClick={onAddToLibrary} disabled={isInLibrary}>
+                {isInLibrary ? "已加入書庫" : "加入書庫"}
+              </button>
+            </div>
+          </div>
+
+          <div className="chapters-list">
+            <h3>章節列表 ({chapters?.length ?? 0})</h3>
+            {isLoading && <p>載入中…</p>}
+            {!isLoading && (!chapters || chapters.length === 0) && <p>尚未有章節</p>}
+
+            <div className="stack">
+              {chapters?.map((chapter) => {
+                const isCurrent = currentChapter?.id === chapter.id;
+                const isCompleted = completedChapters[chapter.id];
+
+                return (
+                  <div
+                    key={chapter.id}
+                    className={`chapter-item ${isCurrent ? "active-chapter" : ""}`}
+                  >
+                    <div className="chapter-main">
+                      <button
+                        className={`play-icon-btn ${isCurrent && isPlaying ? "playing" : ""}`}
+                        onClick={() => handlePlay(chapter)}
+                        title={isCurrent && isPlaying ? "暫停" : "播放"}
+                      >
+                        {isCurrent && isPlaying ? "⏸" : "▶"}
+                      </button>
+                      <div className="chapter-info">
+                        <h4>{chapter.title}</h4>
+                        <div className="meta">
+                          {chapter.audio_duration_sec && (
+                            <span>{Math.floor(chapter.audio_duration_sec / 60)} 分鐘</span>
+                          )}
+                          {chapter.word_count && <span>{chapter.word_count} 字</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {isInLibrary && (
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={isCompleted}
+                          onChange={() => onToggleChapter(chapter.id)}
+                        />
+                        已讀
+                      </label>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
-        <button className="ghost" onClick={onClose} aria-label="關閉章節細節">
-          ✕
-        </button>
       </div>
-      <div className="drawer-body">
-        <p className="muted">共 {chapters?.length ?? 0} 個章節</p>
-        <button className="primary" onClick={onAddToLibrary} disabled={isInLibrary}>
-          {isInLibrary ? "已在我的書庫" : "加入我的書庫"}
-        </button>
-        <div className="chapter-list">
-          {isLoading && <p>載入章節中…</p>}
-          {!isLoading && (!chapters || chapters.length === 0) && <p className="muted">尚未有章節</p>}
-          {chapters?.map((chapter) => (
-            <article key={chapter.id} className="chapter-card">
-              <div>
-                <p className="chapter-title">
-                  {chapter.chapter_number !== undefined && <strong>#{chapter.chapter_number} </strong>}
-                  {chapter.title}
-                </p>
-                <p className="muted stats">
-                  {chapter.word_count ? `${chapter.word_count} 字` : "-"} ·
-                  {chapter.audio_duration_sec ? ` ${Math.round(chapter.audio_duration_sec / 60)} 分` : " 無音訊"} ·
-                  {chapter.words_per_minute ? ` ${chapter.words_per_minute} WPM` : ""}
-                </p>
-              </div>
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={Boolean(completedChapters[chapter.id])}
-                  onChange={() => onToggleChapter(chapter.id)}
-                />
-                <span>完成</span>
-              </label>
-            </article>
-          ))}
-        </div>
-      </div>
-    </aside>
+    </div>
   );
 }

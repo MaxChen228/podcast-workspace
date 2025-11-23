@@ -41,7 +41,14 @@ const loadInitialBooks = (): Record<string, LibraryBook> => {
     }
     const raw = storage.getItem(STORAGE_KEY);
     if (!raw) return {};
-    return JSON.parse(raw) as Record<string, LibraryBook>;
+    const parsed = JSON.parse(raw) as Record<string, LibraryBook>;
+    // Defensive: ensure all books have completedChapters
+    Object.values(parsed).forEach((book) => {
+      if (!book.completedChapters) {
+        book.completedChapters = {};
+      }
+    });
+    return parsed;
   } catch {
     return {};
   }

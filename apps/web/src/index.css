@@ -6,6 +6,67 @@
   background-color: #f6f7fb;
 }
 
+/* Chapter List Styles */
+.chapter-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--surface-hover);
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.chapter-item.active-chapter {
+  background: var(--surface-active);
+  border-left: 3px solid var(--primary);
+}
+
+.chapter-main {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.play-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.play-icon-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.play-icon-btn.playing {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.chapter-info h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+  display: flex;
+  gap: 0.5rem;
+}
+
+
 * {
   box-sizing: border-box;
 }
