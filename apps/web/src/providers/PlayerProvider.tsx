@@ -1,6 +1,4 @@
 import {
-    createContext,
-    useContext,
     useEffect,
     useRef,
     useState,
@@ -8,38 +6,7 @@ import {
 } from "react";
 import type { BookItem, ChapterItem } from "../types/api";
 import { useServerConfig } from "./ServerConfigProvider";
-
-interface PlayerState {
-    isPlaying: boolean;
-    currentBook: BookItem | null;
-    currentChapter: ChapterItem | null;
-    currentTime: number;
-    duration: number;
-    volume: number;
-    playbackRate: number;
-}
-
-interface PlayerContextType extends PlayerState {
-    play: (book: BookItem, chapter: ChapterItem) => void;
-    pause: () => void;
-    resume: () => void;
-    seek: (time: number) => void;
-    setVolume: (volume: number) => void;
-    setPlaybackRate: (rate: number) => void;
-    playNext: () => void;
-    playPrevious: () => void;
-    setPlaylist: (chapters: ChapterItem[]) => void;
-}
-
-const PlayerContext = createContext<PlayerContextType | null>(null);
-
-export function usePlayer() {
-    const context = useContext(PlayerContext);
-    if (!context) {
-        throw new Error("usePlayer must be used within a PlayerProvider");
-    }
-    return context;
-}
+import { PlayerContext, type PlayerState } from "./PlayerContext";
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -88,7 +55,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         };
     }, []);
 
-    const play = (book: BookItem, chapter: ChapterItem) => {
+    const play = (book: BookItem, chapter: ChapterItem, newPlaylist?: ChapterItem[]) => {
         if (!audioRef.current || !apiBaseUrl) return;
 
         const audioUrl = `${apiBaseUrl}/books/${book.id}/chapters/${chapter.id}/audio`;
@@ -102,6 +69,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         audioRef.current.src = audioUrl;
         audioRef.current.load();
         audioRef.current.play().catch(console.error);
+
+        if (newPlaylist) {
+            setPlaylist(newPlaylist);
+        }
 
         setState((prev) => ({
             ...prev,

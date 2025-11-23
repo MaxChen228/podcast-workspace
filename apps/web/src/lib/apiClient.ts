@@ -3,7 +3,7 @@ import type { BookItem, ChapterItem } from "../types/api";
 type FetchOptions = Omit<RequestInit, "body"> & { body?: Record<string, unknown> };
 
 export class ApiClient {
-  constructor(private readonly baseUrl: string) {}
+  constructor(private readonly baseUrl: string) { }
 
   private buildUrl(path: string): string {
     if (!this.baseUrl) {
@@ -23,6 +23,7 @@ export class ApiClient {
     const response = await fetch(url, {
       ...options,
       headers,
+      body: options?.body ? JSON.stringify(options.body) : undefined,
     });
 
     if (!response.ok) {

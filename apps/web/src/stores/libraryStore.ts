@@ -107,8 +107,12 @@ if (storage) {
   });
 }
 
+import { useShallow } from "zustand/react/shallow";
+
 export function useLibraryList(): LibraryBook[] {
-  return useLibraryStore((state) =>
-    Object.values(state.books).sort((a, b) => b.addedAt.localeCompare(a.addedAt))
+  return useLibraryStore(
+    useShallow((state) =>
+      Object.values(state.books).sort((a, b) => b.addedAt.localeCompare(a.addedAt))
+    )
   );
 }

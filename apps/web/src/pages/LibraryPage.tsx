@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { useLibraryList, useLibraryStore, type LibraryBook } from "../stores/libraryStore";
-import { useChaptersQuery } from "../hooks/useChaptersQuery";
-import { usePlayer } from "../providers/PlayerProvider";
+import { useLibraryList } from "../stores/libraryStore";
+import { LibraryCard } from "../components/LibraryCard";
+import { Search, Library } from "lucide-react";
+import { motion } from "framer-motion";
 
 export function LibraryPage() {
   const books = useLibraryList();
@@ -14,103 +15,43 @@ export function LibraryPage() {
   }, [books, searchTerm]);
 
   return (
-    <div className="page">
-      <div className="page-header">
+    <div className="space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1>我的書庫</h1>
-          <p className="muted">收藏的書籍只儲存在本機裝置，可隨時切換伺服器同步章節資訊。</p>
+          <h1 className="text-3xl font-bold tracking-tight text-white">我的書庫</h1>
+          <p className="text-muted-foreground">已收藏的書籍與學習進度</p>
         </div>
-        <div className="search-group">
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
-            placeholder="搜尋收藏書籍"
+            className="h-10 w-full rounded-lg border border-white/10 bg-surface/50 pl-9 pr-4 text-sm text-white placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:w-64"
+            placeholder="搜尋已收藏書籍..."
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            aria-label="搜尋收藏書籍"
           />
         </div>
       </div>
 
-      {books.length === 0 && <p className="muted">尚未加入任何書籍，請先到「書城」探索。</p>}
-      {books.length > 0 && filteredBooks.length === 0 && <p className="muted">找不到符合的書籍</p>}
-
-      <div className="stack">
-        {filteredBooks.map((book) => (
-          <LibraryCard key={book.id} book={book} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function LibraryCard({ book }: { book: LibraryBook }) {
-  const removeBook = useLibraryStore((state) => state.removeBook);
-  const { data: chapters, isLoading, isError, refetch } = useChaptersQuery(book.id, true);
-  const { play, currentBook, currentChapter, isPlaying, pause, resume } = usePlayer();
-
-  const completedCount =
-    chapters?.filter((chapter) => book.completedChapters?.[chapter.id]).length ?? 0;
-  const total = chapters?.length ?? 0;
-
-  const handlePlay = () => {
-    if (!chapters || chapters.length === 0) return;
-
-    // If already playing this book, toggle
-    if (currentBook?.id === book.id) {
-      if (isPlaying) pause();
-      else resume();
-      return;
-    }
-
-    // Play first chapter or first uncompleted
-    const firstUncompleted = chapters.find(c => !book.completedChapters?.[c.id]);
-    play(book, firstUncompleted || chapters[0]);
-  };
-
-  const isCurrentBook = currentBook?.id === book.id;
-
-  return (
-    <article className="card">
-      <header className="card-header">
-        <div className="flex gap-4 items-center">
-          {book.coverUrl && (
-            <img src={book.coverUrl} alt={book.title} className="w-16 h-16 rounded object-cover" />
-          )}
-          <div>
-            <p className="muted">收藏於 {new Date(book.addedAt).toLocaleDateString()}</p>
-            <h2>{book.title}</h2>
-          </div>
+      {filteredBooks.length === 0 ? (
+        <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-surface/20 text-muted-foreground">
+          <Library className="mb-2 h-8 w-8 opacity-50" />
+          <p>{searchTerm ? "找不到符合的書籍" : "書庫目前是空的，快去書城加入一些書吧！"}</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            className={isCurrentBook && isPlaying ? "secondary" : "primary"}
-            onClick={handlePlay}
-            disabled={!chapters || chapters.length === 0}
-          >
-            {isCurrentBook && isPlaying ? "暫停" : "播放"}
-          </button>
-          <button
-            className="ghost danger"
-            onClick={(e) => {
-              e.stopPropagation(); // Prevent bubbling
-              if (confirm(`確定要移除 ${book.title} 嗎？`)) {
-                removeBook(book.id);
-              }
-            }}
-          >
-            移除
-          </button>
-        </div>
-      </header>
-      <p>
-        章節完成度：{completedCount}/{total} {total > 0 && `(${Math.round((completedCount / total) * 100)}%)`}
-      </p>
-      {isLoading && <p className="muted">同步章節中…</p>}
-      {isError && (
-        <div className="notice error">
-          <p>無法取得章節，可能是伺服器 URL 無效。</p>
-          <button onClick={() => refetch()}>重試</button>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredBooks.map((book, index) => (
+            <motion.div
+              key={book.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
+            >
+              <LibraryCard book={book} />
+            </motion.div>
+          ))}
         </div>
       )}
-    </article>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { usePlayer } from "../providers/PlayerProvider";
+import { usePlayer } from "../providers/PlayerContext";
 import { useServerConfig } from "../providers/ServerConfigProvider";
 
 interface SubtitleItem {
