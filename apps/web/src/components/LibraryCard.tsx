@@ -7,7 +7,7 @@ import { Badge } from "./ui/Badge";
 import { Play, Pause, Trash2, BookOpen } from "lucide-react";
 import { useState } from "react";
 
-export function LibraryCard({ book }: { book: LibraryBook }) {
+export function LibraryCard({ book, onClick }: { book: LibraryBook; onClick: () => void }) {
     const removeBook = useLibraryStore((state) => state.removeBook);
     const { play, pause, isPlaying, currentBook } = usePlayer();
     const { data: chapters } = useChaptersQuery(book.id);
@@ -18,7 +18,8 @@ export function LibraryCard({ book }: { book: LibraryBook }) {
     const totalChapters = chapters?.length || 0;
     const progress = totalChapters > 0 ? Math.round((completedCount / totalChapters) * 100) : 0;
 
-    const handlePlay = () => {
+    const handlePlay = (e: React.MouseEvent) => {
+        e.stopPropagation();
         if (isCurrentBook && isPlaying) {
             pause();
         } else {
@@ -30,7 +31,8 @@ export function LibraryCard({ book }: { book: LibraryBook }) {
         }
     };
 
-    const handleRemove = () => {
+    const handleRemove = (e: React.MouseEvent) => {
+        e.stopPropagation();
         if (confirm(`確定要移除《${book.title}》嗎？`)) {
             setIsRemoving(true);
             // Small delay to allow animation if we added one, but for now just remove
@@ -41,7 +43,10 @@ export function LibraryCard({ book }: { book: LibraryBook }) {
     };
 
     return (
-        <Card className={`group relative overflow-hidden border-white/5 bg-surface/40 transition-all hover:bg-surface/60 ${isRemoving ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}>
+        <Card
+            className={`group relative overflow-hidden border-white/5 bg-surface/40 transition-all hover:bg-surface/60 cursor-pointer ${isRemoving ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
+            onClick={onClick}
+        >
             <div className="flex gap-4">
                 {/* Cover */}
                 <div className="relative h-24 w-16 flex-shrink-0 overflow-hidden rounded-md bg-surface-active/50 shadow-md">

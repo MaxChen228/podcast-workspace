@@ -164,3 +164,15 @@ class PodcastJobResponse(BaseModel):
 class PodcastJobListResponse(BaseModel):
     items: List[PodcastJobResponse] = Field(default_factory=list)
     total: int
+
+
+class NewsArticleContent(BaseModel):
+    """Parsed content of a news article."""
+
+    title: str
+    author: Optional[str] = None
+    date_published: Optional[str] = None
+    content: str  # HTML or Markdown content
+    image_url: Optional[str] = None
+    provider_name: Optional[str] = None
+    url: str

@@ -10,7 +10,6 @@ import SwiftUI
 struct NewsFeedView: View {
     @Environment(\.dependencies) private var dependencies
     @StateObject var viewModel: NewsFeedViewModel
-    @State private var presentedArticle: NewsArticle?
 
     private var marketBinding: Binding<String> {
         Binding(
@@ -25,12 +24,14 @@ struct NewsFeedView: View {
 
             Section {
                 ForEach(viewModel.articles) { article in
-                    NewsArticleRow(article: article)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            presentedArticle = article
-                            viewModel.recordAction(.open, for: article)
-                        }
+                    NavigationLink {
+                        NewsDetailView(article: article)
+                            .onAppear {
+                                viewModel.recordAction(.open, for: article)
+                            }
+                    } label: {
+                        NewsArticleRow(article: article)
+                    }
                 }
             }
         }
@@ -52,9 +53,6 @@ struct NewsFeedView: View {
         }
         .task {
             viewModel.loadIfNeeded()
-        }
-        .sheet(item: $presentedArticle) { article in
-            SafariView(url: article.url)
         }
     }
 

@@ -31,6 +31,7 @@ from .schemas import (
     NewsHeadlineResponse,
     NewsInteraction,
     NewsSearchResponse,
+    NewsArticleContent,
     PhraseExplanationRequest,
     SentenceExplanationRequest,
     SentenceExplanationResponse,
@@ -396,6 +397,20 @@ def _register_routes(app: FastAPI) -> None:
     ) -> dict[str, str]:
         await run_in_threadpool(news_logger.log, payload.model_dump())
         return {"status": "accepted"}
+
+    @app.get("/news/parse", response_model=NewsArticleContent)
+    async def news_parse(
+        url: str = Query(..., min_length=1, description="URL of the article to parse"),
+        news_service: NewsService = Depends(get_news_service),
+    ) -> NewsArticleContent:
+        try:
+            return await news_service.fetch_article_content(url)
+        except NewsValidationError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        except NewsAPIError as exc:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
+        except NewsServiceError as exc:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
 
     @app.get("/debug/gcs")
     async def debug_gcs(

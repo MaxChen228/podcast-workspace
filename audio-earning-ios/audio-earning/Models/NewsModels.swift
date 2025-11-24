@@ -98,3 +98,13 @@ enum NewsCategoryFilter: String, CaseIterable, Identifiable {
         }
     }
 }
+
+struct NewsArticleContent: Decodable, Equatable {
+    let title: String
+    let author: String?
+    let datePublished: String?
+    let content: String
+    let imageUrl: URL?
+    let providerName: String?
+    let url: URL
+}

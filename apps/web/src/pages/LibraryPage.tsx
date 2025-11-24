@@ -1,18 +1,38 @@
 import { useMemo, useState } from "react";
-import { useLibraryList } from "../stores/libraryStore";
+import { useLibraryList, useLibraryStore } from "../stores/libraryStore";
 import { LibraryCard } from "../components/LibraryCard";
+import { BookDetailDrawer } from "../components/BookDetailDrawer";
 import { Search, Library } from "lucide-react";
 import { motion } from "framer-motion";
+import type { BookItem } from "../types/api";
+import { useChaptersQuery } from "../hooks/useChaptersQuery";
 
 export function LibraryPage() {
   const books = useLibraryList();
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedBook, setSelectedBook] = useState<BookItem | null>(null);
+  const toggleChapterCompletion = useLibraryStore((state) => state.toggleChapterCompletion);
+  const libraryBooks = useLibraryStore((state) => state.books);
+
+  const { data: chapters, isLoading: isLoadingChapters } = useChaptersQuery(
+    selectedBook?.id,
+    Boolean(selectedBook)
+  );
 
   const filteredBooks = useMemo(() => {
     if (!searchTerm.trim()) return books;
     const keyword = searchTerm.trim().toLowerCase();
     return books.filter((book) => book.title.toLowerCase().includes(keyword));
   }, [books, searchTerm]);
+
+  // Convert LibraryBook to BookItem for the drawer
+  const handleSelectBook = (libBook: any) => {
+    setSelectedBook({
+      id: libBook.id,
+      title: libBook.title,
+      cover_url: libBook.coverUrl, // Map back to API format if needed
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -47,10 +67,23 @@ export function LibraryPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
             >
-              <LibraryCard book={book} />
+              <LibraryCard book={book} onClick={() => handleSelectBook(book)} />
             </motion.div>
           ))}
         </div>
+      )}
+
+      {selectedBook && (
+        <BookDetailDrawer
+          book={selectedBook}
+          chapters={chapters}
+          isLoading={isLoadingChapters}
+          onClose={() => setSelectedBook(null)}
+          onAddToLibrary={() => { }} // Already in library
+          isInLibrary={true}
+          onToggleChapter={(chapterId) => toggleChapterCompletion(selectedBook.id, chapterId)}
+          completedChapters={libraryBooks[selectedBook.id]?.completedChapters ?? {}}
+        />
       )}
     </div>
   );

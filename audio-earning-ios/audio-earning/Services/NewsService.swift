@@ -127,6 +127,40 @@ final class NewsService: NewsServiceProtocol {
             throw NewsServiceError.decodingFailed
         }
     }
+
+    func fetchArticleContent(url: URL) async throws -> NewsArticleContent {
+        let endpoint = NewsEndpoint.parse(url: url.absoluteString)
+        let requestURL = try endpoint.url(baseURL: APIConfiguration.shared.baseURL)
+        
+        // Use performRequest-like logic but for a specific return type
+        // Since performRequest is typed to NewsFeed, we'll implement a generic helper or just inline it here for simplicity
+        
+        guard var components = URLComponents(url: requestURL, resolvingAgainstBaseURL: false) else {
+            throw NewsServiceError.invalidResponse
+        }
+        components.queryItems = endpoint.queryItems
+        
+        guard let finalURL = components.url else {
+            throw NewsServiceError.invalidResponse
+        }
+
+        let (data, response) = try await session.data(from: finalURL)
+        guard let http = response as? HTTPURLResponse else {
+            throw NewsServiceError.invalidResponse
+        }
+        
+        guard 200..<300 ~= http.statusCode else {
+            throw NewsServiceError.backendStatus(http.statusCode)
+        }
+        
+        do {
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            return try decoder.decode(NewsArticleContent.self, from: data)
+        } catch {
+            throw NewsServiceError.decodingFailed
+        }
+    }
 }
 
 // MARK: - Private helpers
@@ -134,6 +168,7 @@ final class NewsService: NewsServiceProtocol {
 private enum NewsEndpoint {
     case headlines(category: String?, market: String?, count: Int?)
     case search(query: String, market: String?, count: Int?)
+    case parse(url: String)
 
     func url(baseURL: URL) throws -> URL {
         switch self {
@@ -141,6 +176,8 @@ private enum NewsEndpoint {
             return baseURL.appendingPathComponent("news").appendingPathComponent("headlines")
         case .search:
             return baseURL.appendingPathComponent("news").appendingPathComponent("search")
+        case .parse:
+            return baseURL.appendingPathComponent("news").appendingPathComponent("parse")
         }
     }
 
@@ -167,6 +204,8 @@ private enum NewsEndpoint {
                 items.append(URLQueryItem(name: "count", value: String(count)))
             }
             return items
+        case .parse(let url):
+            return [URLQueryItem(name: "url", value: url)]
         }
     }
 
@@ -176,6 +215,8 @@ private enum NewsEndpoint {
             return "headlines-\(category ?? "top")-\(market ?? "default")-\(count ?? 0)"
         case .search(let query, let market, let count):
             return "search-\(query.lowercased())-\(market ?? "default")-\(count ?? 0)"
+        case .parse(let url):
+            return "parse-\(url.hashValue)"
         }
     }
 }

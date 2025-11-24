@@ -288,6 +288,77 @@ class NewsService:
             source="newsdata-io",
         )
 
+    async def fetch_article_content(self, url: str) -> "NewsArticleContent":
+        """Fetches and parses the content of a news article."""
+        from bs4 import BeautifulSoup
+        from ..schemas import NewsArticleContent
+
+        try:
+            async with httpx.AsyncClient(timeout=self.http_timeout, follow_redirects=True) as client:
+                # Add headers to mimic a browser to avoid some basic anti-bot protections
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                }
+                response = await client.get(url, headers=headers)
+                response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise NewsAPIError(f"Failed to fetch article: {exc}") from exc
+
+        try:
+            soup = BeautifulSoup(response.text, "html.parser")
+            
+            # Basic metadata extraction
+            title = soup.title.string if soup.title else ""
+            
+            # Try to find the main article body
+            # This is a heuristic approach and might need refinement for specific sites
+            article_body = soup.find("article")
+            if not article_body:
+                # Fallback to common class names
+                for class_name in ["article-content", "post-content", "entry-content", "content", "main"]:
+                    article_body = soup.find(class_=class_name)
+                    if article_body:
+                        break
+            
+            if not article_body:
+                # Last resort: just grab all paragraphs
+                content_html = "".join([str(p) for p in soup.find_all("p")])
+            else:
+                # Clean up the content
+                for tag in article_body(["script", "style", "iframe", "form", "nav", "footer", "header"]):
+                    tag.decompose()
+                content_html = str(article_body)
+
+            # Try to extract image
+            image_url = None
+            og_image = soup.find("meta", property="og:image")
+            if og_image:
+                image_url = og_image.get("content")
+
+            # Try to extract author
+            author = None
+            meta_author = soup.find("meta", attrs={"name": "author"})
+            if meta_author:
+                author = meta_author.get("content")
+
+            # Try to extract date
+            date_published = None
+            meta_date = soup.find("meta", property="article:published_time")
+            if meta_date:
+                date_published = meta_date.get("content")
+
+            return NewsArticleContent(
+                title=title.strip() if title else "No Title",
+                author=author,
+                date_published=date_published,
+                content=content_html,
+                image_url=image_url,
+                url=url
+            )
+
+        except Exception as exc:
+            raise NewsValidationError(f"Failed to parse article content: {exc}") from exc
+
     def _cache_key(self, prefix: str, params: Dict[str, Any]) -> str:
         serialized = "&".join(f"{k}={params[k]}" for k in sorted(params))
         return f"{prefix}:{serialized}"
@@ -333,3 +404,5 @@ class NewsEventLogger:
         with self._lock:
             with filename.open("a", encoding="utf-8") as fh:
                 fh.write(json.dumps(enriched, ensure_ascii=False) + "\n")
+
+
