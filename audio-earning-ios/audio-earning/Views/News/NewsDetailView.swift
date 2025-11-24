@@ -6,15 +6,12 @@
 //
 
 import SwiftUI
-import WebKit
 
 struct NewsDetailView: View {
     let article: NewsArticle
     @State private var content: NewsArticleContent?
     @State private var isLoading = true
     @State private var errorMessage: String?
-
-    @State private var webViewHeight: CGFloat = .zero
 
     var body: some View {
         ScrollView {
@@ -81,9 +78,11 @@ struct NewsDetailView: View {
                             }
                         }
                         .frame(maxWidth: .infinity, minHeight: 200)
-                    } else if let htmlContent = content?.content {
-                        HTMLTextView(htmlContent: htmlContent, dynamicHeight: $webViewHeight)
-                            .frame(height: webViewHeight)
+                    } else if let textContent = content?.content {
+                        Text(textContent)
+                            .font(.body)
+                            .lineSpacing(4)
+                            .textSelection(.enabled)
                     }
                 }
                 .padding(.horizontal)
@@ -100,7 +99,7 @@ struct NewsDetailView: View {
     private func loadContent() {
         isLoading = true
         errorMessage = nil
-        
+
         Task {
             do {
                 content = try await NewsService.shared.fetchArticleContent(url: article.url)
@@ -110,90 +109,5 @@ struct NewsDetailView: View {
                 errorMessage = error.localizedDescription
             }
         }
-    }
-}
-
-// Helper to render HTML content safely
-struct HTMLTextView: UIViewRepresentable {
-    let htmlContent: String
-    @Binding var dynamicHeight: CGFloat
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    class Coordinator: NSObject, WKNavigationDelegate {
-        var parent: HTMLTextView
-
-        init(_ parent: HTMLTextView) {
-            self.parent = parent
-        }
-
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            webView.evaluateJavaScript("document.body.scrollHeight") { (result, error) in
-                if let height = result as? CGFloat {
-                    DispatchQueue.main.async {
-                        self.parent.dynamicHeight = height
-                    }
-                }
-            }
-        }
-    }
-
-    func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView()
-        webView.navigationDelegate = context.coordinator
-        webView.isOpaque = false
-        webView.backgroundColor = .clear
-        webView.scrollView.isScrollEnabled = false
-        return webView
-    }
-
-    func updateUIView(_ uiView: WKWebView, context: Context) {
-        let css = """
-        <style>
-            body {
-                font-family: -apple-system, system-ui, sans-serif;
-                font-size: 110%;
-                line-height: 1.6;
-                color: #333;
-                padding: 0;
-                margin: 0;
-            }
-            @media (prefers-color-scheme: dark) {
-                body {
-                    color: #eee;
-                }
-            }
-            img {
-                max-width: 100%;
-                height: auto;
-                border-radius: 8px;
-                margin: 10px 0;
-            }
-            p {
-                margin-bottom: 1.2em;
-            }
-            h1, h2, h3, h4, h5, h6 {
-                margin-top: 1.5em;
-                margin-bottom: 0.5em;
-            }
-        </style>
-        """
-        
-        let fullHTML = """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            \(css)
-        </head>
-        <body>
-            \(htmlContent)
-        </body>
-        </html>
-        """
-        
-        uiView.loadHTMLString(fullHTML, baseURL: nil)
     }
 }

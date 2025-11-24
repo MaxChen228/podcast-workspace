@@ -303,9 +303,6 @@ class NewsService:
             # Run newspaper4k in a thread pool to avoid blocking the event loop
             article = await asyncio.to_thread(self._parse_article_sync, url, config)
 
-            # Convert plain text to HTML paragraphs for iOS rendering
-            content_html = self._text_to_html(article.text)
-
             # Format publish date
             date_published = None
             if article.publish_date:
@@ -321,7 +318,7 @@ class NewsService:
                 title=article.title or "No Title",
                 author=author,
                 date_published=date_published,
-                content=content_html,
+                content=article.text,  # Return plain text directly
                 image_url=article.top_image or None,
                 url=url,
                 provider_name=article.source_url or None
@@ -342,23 +339,6 @@ class NewsService:
             raise ValueError("Article text is empty after parsing")
 
         return article
-
-    def _text_to_html(self, text: str) -> str:
-        """Convert plain text to HTML paragraphs."""
-        if not text:
-            return ""
-
-        # Split by double newlines (paragraph breaks)
-        paragraphs = text.split('\n\n')
-        html_parts = []
-
-        for para in paragraphs:
-            # Clean up single newlines within paragraphs
-            cleaned = para.replace('\n', ' ').strip()
-            if cleaned:
-                html_parts.append(f"<p>{cleaned}</p>")
-
-        return "\n".join(html_parts)
 
     def _cache_key(self, prefix: str, params: Dict[str, Any]) -> str:
         serialized = "&".join(f"{k}={params[k]}" for k in sorted(params))
