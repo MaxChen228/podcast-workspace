@@ -14,6 +14,8 @@ struct NewsDetailView: View {
     @State private var isLoading = true
     @State private var errorMessage: String?
 
+    @State private var webViewHeight: CGFloat = .zero
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -80,7 +82,8 @@ struct NewsDetailView: View {
                         }
                         .frame(maxWidth: .infinity, minHeight: 200)
                     } else if let htmlContent = content?.content {
-                        HTMLTextView(htmlContent: htmlContent)
+                        HTMLTextView(htmlContent: htmlContent, dynamicHeight: $webViewHeight)
+                            .frame(height: webViewHeight)
                     }
                 }
                 .padding(.horizontal)
@@ -113,12 +116,36 @@ struct NewsDetailView: View {
 // Helper to render HTML content safely
 struct HTMLTextView: UIViewRepresentable {
     let htmlContent: String
+    @Binding var dynamicHeight: CGFloat
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, WKNavigationDelegate {
+        var parent: HTMLTextView
+
+        init(_ parent: HTMLTextView) {
+            self.parent = parent
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            webView.evaluateJavaScript("document.body.scrollHeight") { (result, error) in
+                if let height = result as? CGFloat {
+                    DispatchQueue.main.async {
+                        self.parent.dynamicHeight = height
+                    }
+                }
+            }
+        }
+    }
 
     func makeUIView(context: Context) -> WKWebView {
         let webView = WKWebView()
+        webView.navigationDelegate = context.coordinator
         webView.isOpaque = false
         webView.backgroundColor = .clear
-        webView.scrollView.isScrollEnabled = false // Let parent ScrollView handle scrolling
+        webView.scrollView.isScrollEnabled = false
         return webView
     }
 

@@ -83,7 +83,10 @@ final class NewsService: NewsServiceProtocol {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        guard let body = try? JSONEncoder().encode(event) else { return }
+        
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        guard let body = try? encoder.encode(event) else { return }
         request.httpBody = body
 
         do {
