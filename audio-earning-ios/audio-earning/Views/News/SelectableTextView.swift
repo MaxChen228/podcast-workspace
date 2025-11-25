@@ -113,7 +113,7 @@ struct SelectableTextView: UIViewRepresentable {
             // Store text view reference
             self.textView = textView
 
-            // Show edit menu when text is selected
+            // Show edit menu when text is selected (with delay to wait for selection to stabilize)
             if #available(iOS 16.0, *) {
                 guard let selectedRange = textView.selectedTextRange,
                       !selectedRange.isEmpty,
@@ -121,19 +121,29 @@ struct SelectableTextView: UIViewRepresentable {
                     return
                 }
 
-                // Get the rect of selected text
-                let selectionRects = textView.selectionRects(for: selectedRange)
-                guard let firstRect = selectionRects.first else { return }
+                // Delay to wait for selection gesture to complete
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                    guard let self = self,
+                          let textView = self.textView,
+                          let selectedRange = textView.selectedTextRange,
+                          !selectedRange.isEmpty else {
+                        return
+                    }
 
-                let targetRect = firstRect.rect
+                    // Get the rect of selected text
+                    let selectionRects = textView.selectionRects(for: selectedRange)
+                    guard let firstRect = selectionRects.first else { return }
 
-                // Present the edit menu at the selection
-                let configuration = UIEditMenuConfiguration(
-                    identifier: nil,
-                    sourcePoint: CGPoint(x: targetRect.midX, y: targetRect.minY)
-                )
+                    let targetRect = firstRect.rect
 
-                interaction.presentEditMenu(with: configuration)
+                    // Present the edit menu at the selection
+                    let configuration = UIEditMenuConfiguration(
+                        identifier: nil,
+                        sourcePoint: CGPoint(x: targetRect.midX, y: targetRect.minY)
+                    )
+
+                    interaction.presentEditMenu(with: configuration)
+                }
             }
         }
 
