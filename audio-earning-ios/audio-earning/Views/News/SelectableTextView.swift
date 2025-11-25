@@ -91,7 +91,7 @@ struct SelectableTextView: UIViewRepresentable {
     class Coordinator: NSObject, UITextViewDelegate {
         let onExplainSelection: (String) -> Void
         weak var textView: UITextView?
-        private var editMenuInteraction: Any?  // UIEditMenuInteraction
+        private var editMenuInteraction: UIEditMenuInteraction?
 
         init(onExplainSelection: @escaping (String) -> Void) {
             self.onExplainSelection = onExplainSelection
@@ -112,6 +112,29 @@ struct SelectableTextView: UIViewRepresentable {
         func textViewDidChangeSelection(_ textView: UITextView) {
             // Store text view reference
             self.textView = textView
+
+            // Show edit menu when text is selected
+            if #available(iOS 16.0, *) {
+                guard let selectedRange = textView.selectedTextRange,
+                      !selectedRange.isEmpty,
+                      let interaction = editMenuInteraction else {
+                    return
+                }
+
+                // Get the rect of selected text
+                let selectionRects = textView.selectionRects(for: selectedRange)
+                guard let firstRect = selectionRects.first else { return }
+
+                let targetRect = firstRect.rect
+
+                // Present the edit menu at the selection
+                let configuration = UIEditMenuConfiguration(
+                    identifier: nil,
+                    sourcePoint: CGPoint(x: targetRect.midX, y: targetRect.minY)
+                )
+
+                interaction.presentEditMenu(with: configuration)
+            }
         }
 
         @objc func explainSelection() {
