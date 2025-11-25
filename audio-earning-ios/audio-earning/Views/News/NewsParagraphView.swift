@@ -15,10 +15,22 @@ struct NewsParagraphView: View {
     let onHighlightToggle: () -> Void
     let onNoteAdd: () -> Void
 
+    // Selection state
+    @State private var selectedText: String?
+    @State private var selectionRect: CGRect?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Paragraph Text - now using SelectableTextView
-            paragraphText
+            // Paragraph Text with floating button overlay
+            ZStack(alignment: .topLeading) {
+                // Paragraph Text - now using SelectableTextView
+                paragraphText
+
+                // Floating AI Explain Button
+                if let text = selectedText, let rect = selectionRect {
+                    aiExplainFloatingButton(selectedText: text, rect: rect)
+                }
+            }
 
             // Action Buttons (Highlight & Note)
             actionButtons
@@ -61,10 +73,46 @@ struct NewsParagraphView: View {
             lineSpacing: ArticleReaderStyle.bodyLineSpacing,
             tracking: ArticleReaderStyle.bodyTracking,
             isHighlighted: paragraph.isHighlighted,
+            selectedText: $selectedText,
+            selectionRect: $selectionRect,
             onExplainSelection: { selectedText in
                 onExplainSelection(selectedText)
+                // Clear selection after action
+                self.selectedText = nil
+                self.selectionRect = nil
             }
         )
+    }
+
+    // MARK: - Floating AI Explain Button
+
+    @ViewBuilder
+    private func aiExplainFloatingButton(selectedText: String, rect: CGRect) -> some View {
+        Button {
+            onExplainSelection(selectedText)
+            // Clear selection
+            self.selectedText = nil
+            self.selectionRect = nil
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("AI 解釋")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(Color.accentColor)
+                    .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+            )
+        }
+        .buttonStyle(.plain)
+        .offset(x: rect.minX, y: rect.minY - 50)
+        .transition(.scale.combined(with: .opacity))
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedText)
     }
 
     // MARK: - Action Buttons

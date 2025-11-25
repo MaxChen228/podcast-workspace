@@ -15,6 +15,8 @@ struct SelectableTextView: UIViewRepresentable {
     let lineSpacing: CGFloat
     let tracking: CGFloat
     let isHighlighted: Bool
+    @Binding var selectedText: String?
+    @Binding var selectionRect: CGRect?
     let onExplainSelection: (String) -> Void
 
     func makeUIView(context: Context) -> SelfSizingTextView {
@@ -46,9 +48,6 @@ struct SelectableTextView: UIViewRepresentable {
         ]
 
         textView.attributedText = NSAttributedString(string: text, attributes: attributes)
-
-        // Setup edit menu interaction for iOS 16+
-        context.coordinator.setupEditMenu(for: textView)
 
         return textView
     }
@@ -83,120 +82,88 @@ struct SelectableTextView: UIViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onExplainSelection: onExplainSelection)
+        Coordinator(
+            onExplainSelection: onExplainSelection,
+            selectedText: $selectedText,
+            selectionRect: $selectionRect
+        )
     }
 
     // MARK: - Coordinator
 
     class Coordinator: NSObject, UITextViewDelegate {
         let onExplainSelection: (String) -> Void
+        let selectedText: Binding<String?>
+        let selectionRect: Binding<CGRect?>
         weak var textView: UITextView?
-        private var editMenuInteraction: UIEditMenuInteraction?
+        private var selectionDebounceTimer: Timer?
 
-        init(onExplainSelection: @escaping (String) -> Void) {
+        init(
+            onExplainSelection: @escaping (String) -> Void,
+            selectedText: Binding<String?>,
+            selectionRect: Binding<CGRect?>
+        ) {
             self.onExplainSelection = onExplainSelection
+            self.selectedText = selectedText
+            self.selectionRect = selectionRect
             super.init()
         }
 
-        func setupEditMenu(for textView: UITextView) {
-            self.textView = textView
-
-            // Use UIEditMenuInteraction for iOS 16+
-            if #available(iOS 16.0, *) {
-                let interaction = UIEditMenuInteraction(delegate: self)
-                textView.addInteraction(interaction)
-                self.editMenuInteraction = interaction
-            }
-        }
-
         func textViewDidChangeSelection(_ textView: UITextView) {
-            // Store text view reference
             self.textView = textView
 
-            // Show edit menu when text is selected (with delay to wait for selection to stabilize)
-            if #available(iOS 16.0, *) {
-                guard let selectedRange = textView.selectedTextRange,
-                      !selectedRange.isEmpty,
-                      let interaction = editMenuInteraction else {
-                    return
+            // Cancel previous timer
+            selectionDebounceTimer?.invalidate()
+
+            // Check if there's a selection
+            guard let selectedRange = textView.selectedTextRange,
+                  !selectedRange.isEmpty else {
+                // Clear selection
+                DispatchQueue.main.async {
+                    self.selectedText.wrappedValue = nil
+                    self.selectionRect.wrappedValue = nil
                 }
-
-                // Delay to wait for selection gesture to complete
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                    guard let self = self,
-                          let textView = self.textView,
-                          let selectedRange = textView.selectedTextRange,
-                          !selectedRange.isEmpty else {
-                        return
-                    }
-
-                    // Get the rect of selected text
-                    let selectionRects = textView.selectionRects(for: selectedRange)
-                    guard let firstRect = selectionRects.first else { return }
-
-                    let targetRect = firstRect.rect
-
-                    // Present the edit menu at the selection
-                    let configuration = UIEditMenuConfiguration(
-                        identifier: nil,
-                        sourcePoint: CGPoint(x: targetRect.midX, y: targetRect.minY)
-                    )
-
-                    interaction.presentEditMenu(with: configuration)
-                }
-            }
-        }
-
-        @objc func explainSelection() {
-            guard let textView = textView,
-                  let selectedRange = textView.selectedTextRange,
-                  let selectedText = textView.text(in: selectedRange) else {
                 return
             }
 
-            let trimmedText = selectedText.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmedText.isEmpty else { return }
-
-            onExplainSelection(trimmedText)
-
-            // Clear selection after action
-            DispatchQueue.main.async {
-                textView.selectedTextRange = nil
+            // Debounce: wait 0.2s before processing selection
+            selectionDebounceTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { [weak self] _ in
+                self?.processSelection(textView: textView, selectedRange: selectedRange)
             }
         }
-    }
-}
 
-// MARK: - iOS 16+ Edit Menu Support
+        private func processSelection(textView: UITextView, selectedRange: UITextRange) {
+            guard let text = textView.text(in: selectedRange) else {
+                clearSelection()
+                return
+            }
 
-@available(iOS 16.0, *)
-extension SelectableTextView.Coordinator: UIEditMenuInteractionDelegate {
-    func editMenuInteraction(
-        _ interaction: UIEditMenuInteraction,
-        menuFor configuration: UIEditMenuConfiguration,
-        suggestedActions: [UIMenuElement]
-    ) -> UIMenu? {
-        // Only add AI explanation if there's a text selection
-        guard let textView = textView,
-              let selectedRange = textView.selectedTextRange,
-              !selectedRange.isEmpty else {
-            return nil
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else {
+                clearSelection()
+                return
+            }
+
+            // Get selection rect
+            let selectionRects = textView.selectionRects(for: selectedRange)
+            guard let firstRect = selectionRects.first else {
+                clearSelection()
+                return
+            }
+
+            // Update bindings on main thread
+            DispatchQueue.main.async {
+                self.selectedText.wrappedValue = trimmed
+                self.selectionRect.wrappedValue = firstRect.rect
+            }
         }
 
-        // Create AI explanation action
-        let explainAction = UIAction(
-            title: "AI 解釋",
-            image: UIImage(systemName: "sparkles")
-        ) { [weak self] _ in
-            self?.explainSelection()
+        private func clearSelection() {
+            DispatchQueue.main.async {
+                self.selectedText.wrappedValue = nil
+                self.selectionRect.wrappedValue = nil
+            }
         }
-
-        // Combine with suggested actions
-        var actions = [UIMenuElement]()
-        actions.append(explainAction)
-        actions.append(contentsOf: suggestedActions)
-
-        return UIMenu(children: actions)
     }
 }
 
@@ -244,33 +211,48 @@ class SelfSizingTextView: UITextView {
 // MARK: - Preview
 
 #Preview {
-    ScrollView {
-        VStack(spacing: 20) {
-            SelectableTextView(
-                text: "The Dallas Wings won the 2026 WNBA draft lottery on Sunday, securing the No. 1 overall pick in next year's draft.",
-                font: UIFont.systemFont(ofSize: 18, weight: .regular),
-                textColor: .label,
-                lineSpacing: 6,
-                tracking: 0.3,
-                isHighlighted: false,
-                onExplainSelection: { selectedText in
-                    print("Selected text: \(selectedText)")
-                }
-            )
-            .padding()
+    struct PreviewWrapper: View {
+        @State private var selectedText1: String?
+        @State private var selectionRect1: CGRect?
+        @State private var selectedText2: String?
+        @State private var selectionRect2: CGRect?
 
-            SelectableTextView(
-                text: "The Wings had the best odds at 44.2% after finishing with the league's worst record at 9-31 in 2025.",
-                font: UIFont.systemFont(ofSize: 18, weight: .regular),
-                textColor: .label,
-                lineSpacing: 6,
-                tracking: 0.3,
-                isHighlighted: true,
-                onExplainSelection: { selectedText in
-                    print("Selected text: \(selectedText)")
+        var body: some View {
+            ScrollView {
+                VStack(spacing: 20) {
+                    SelectableTextView(
+                        text: "The Dallas Wings won the 2026 WNBA draft lottery on Sunday, securing the No. 1 overall pick in next year's draft.",
+                        font: UIFont.systemFont(ofSize: 18, weight: .regular),
+                        textColor: .label,
+                        lineSpacing: 6,
+                        tracking: 0.3,
+                        isHighlighted: false,
+                        selectedText: $selectedText1,
+                        selectionRect: $selectionRect1,
+                        onExplainSelection: { selectedText in
+                            print("Selected text: \(selectedText)")
+                        }
+                    )
+                    .padding()
+
+                    SelectableTextView(
+                        text: "The Wings had the best odds at 44.2% after finishing with the league's worst record at 9-31 in 2025.",
+                        font: UIFont.systemFont(ofSize: 18, weight: .regular),
+                        textColor: .label,
+                        lineSpacing: 6,
+                        tracking: 0.3,
+                        isHighlighted: true,
+                        selectedText: $selectedText2,
+                        selectionRect: $selectionRect2,
+                        onExplainSelection: { selectedText in
+                            print("Selected text: \(selectedText)")
+                        }
+                    )
+                    .padding()
                 }
-            )
-            .padding()
+            }
         }
     }
+
+    return PreviewWrapper()
 }
