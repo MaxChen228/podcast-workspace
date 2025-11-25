@@ -11,25 +11,27 @@ struct NewsParagraphView: View {
     let paragraph: NewsArticleParagraph
     let appearance: NewsReaderAppearance
     let bodySize: CGFloat
-    let onExplainRequest: () -> Void
+    let onExplainSelection: (String) -> Void  // Changed: now accepts selected text
     let onHighlightToggle: () -> Void
     let onNoteAdd: () -> Void
 
-    @State private var showContextMenu = false
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Paragraph Text
+            // Paragraph Text - now using SelectableTextView
             paragraphText
-                .contextMenu {
-                    contextMenuContent
-                }
+
+            // Action Buttons (Highlight & Note)
+            actionButtons
+                .padding(.top, 8)
 
             // Expandable Explanation Card
             if paragraph.isExplanationExpanded {
                 ParagraphExplanationCard(
                     state: paragraph.explanationState,
-                    onRetry: onExplainRequest,
+                    onRetry: {
+                        // Retry with empty selection (full paragraph)
+                        onExplainSelection("")
+                    },
                     onSaveToLexicon: {
                         // TODO: Implement save to lexicon
                     }
@@ -52,61 +54,65 @@ struct NewsParagraphView: View {
     // MARK: - Paragraph Text
 
     private var paragraphText: some View {
-        Text(paragraph.text)
-            .font(appearance.bodyFont.font(size: bodySize, weight: .regular))
-            .lineSpacing(ArticleReaderStyle.bodyLineSpacing)
-            .tracking(ArticleReaderStyle.bodyTracking)
-            .multilineTextAlignment(.leading)
-            .textSelection(.enabled)
-            .foregroundColor(.primary)
-            .padding(paragraph.isHighlighted ? 12 : 0)
-            .background(
-                paragraph.isHighlighted ?
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.12))
-                    : nil
-            )
+        SelectableTextView(
+            text: paragraph.text,
+            font: appearance.bodyFont.uiFont(size: bodySize, weight: .regular),
+            textColor: .label,
+            lineSpacing: ArticleReaderStyle.bodyLineSpacing,
+            tracking: ArticleReaderStyle.bodyTracking,
+            isHighlighted: paragraph.isHighlighted,
+            onExplainSelection: { selectedText in
+                onExplainSelection(selectedText)
+            }
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Context Menu
+    // MARK: - Action Buttons
 
-    @ViewBuilder
-    private var contextMenuContent: some View {
-        Button {
-            onExplainRequest()
-        } label: {
-            Label("AI 解釋", systemImage: "sparkles")
-        }
-
-        Button {
-            onHighlightToggle()
-        } label: {
-            Label(
-                paragraph.isHighlighted ? "取消高亮" : "高亮段落",
-                systemImage: paragraph.isHighlighted ? "highlighter" : "highlighter"
-            )
-        }
-
-        Button {
-            onNoteAdd()
-        } label: {
-            Label(
-                paragraph.hasNote ? "編輯筆記" : "添加筆記",
-                systemImage: paragraph.hasNote ? "note.text" : "note.text.badge.plus"
-            )
-        }
-
-        Divider()
-
-        Button(role: .destructive) {
-            // Collapse explanation if expanded
-            if paragraph.isExplanationExpanded {
-                onExplainRequest() // Toggle to collapse
+    private var actionButtons: some View {
+        HStack(spacing: 12) {
+            // Highlight Button
+            Button {
+                onHighlightToggle()
+            } label: {
+                Label(
+                    paragraph.isHighlighted ? "取消高亮" : "高亮",
+                    systemImage: "highlighter"
+                )
+                .font(.caption)
+                .foregroundColor(paragraph.isHighlighted ? .accentColor : .secondary)
             }
-        } label: {
-            Label("收起", systemImage: "xmark")
+            .buttonStyle(.plain)
+
+            // Note Button
+            Button {
+                onNoteAdd()
+            } label: {
+                Label(
+                    paragraph.hasNote ? "筆記" : "筆記",
+                    systemImage: paragraph.hasNote ? "note.text" : "note.text.badge.plus"
+                )
+                .font(.caption)
+                .foregroundColor(paragraph.hasNote ? .accentColor : .secondary)
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            // Collapse Button (only shown when explanation is expanded)
+            if paragraph.isExplanationExpanded {
+                Button {
+                    onExplainSelection("")  // Empty string to collapse
+                } label: {
+                    Label("收起", systemImage: "chevron.up")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
         }
-        .disabled(!paragraph.isExplanationExpanded)
+        .padding(.horizontal, 4)
     }
 
     // MARK: - Note Display
@@ -339,7 +345,9 @@ struct ParagraphExplanationCard: View {
                 paragraph: NewsArticleParagraph(text: "The Dallas Wings won the 2026 WNBA draft lottery on Sunday, securing the No. 1 overall pick in next year's draft.", index: 0),
                 appearance: .default,
                 bodySize: 18,
-                onExplainRequest: {},
+                onExplainSelection: { selectedText in
+                    print("Selected: \(selectedText)")
+                },
                 onHighlightToggle: {},
                 onNoteAdd: {}
             )
@@ -354,7 +362,9 @@ struct ParagraphExplanationCard: View {
                 ),
                 appearance: .default,
                 bodySize: 18,
-                onExplainRequest: {},
+                onExplainSelection: { selectedText in
+                    print("Selected: \(selectedText)")
+                },
                 onHighlightToggle: {},
                 onNoteAdd: {}
             )

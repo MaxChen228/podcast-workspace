@@ -16,12 +16,20 @@ struct NewsDetailView: View {
     @State private var showSettings = false
     @State private var appearance: NewsReaderAppearance = NewsReaderAppearance.loadFromUserDefaults()
 
+    // AI Explanation Service
+    private let explanationService: SentenceExplaining
+
     // Dynamic Type support with appearance-based sizing
     @ScaledMetric(relativeTo: .title) private var scaledTitleSize: CGFloat = 32
     @ScaledMetric(relativeTo: .body) private var scaledBodySize: CGFloat = 18
     @ScaledMetric(relativeTo: .caption) private var scaledCaptionSize: CGFloat = 14
 
     @Environment(\.colorScheme) var colorScheme
+
+    init(article: NewsArticle, explanationService: SentenceExplaining = SentenceExplanationService()) {
+        self.article = article
+        self.explanationService = explanationService
+    }
 
     // Computed sizes based on appearance settings
     private var titleSize: CGFloat {
@@ -222,8 +230,8 @@ struct NewsDetailView: View {
                     paragraph: paragraphs[index],
                     appearance: appearance,
                     bodySize: bodySize,
-                    onExplainRequest: {
-                        handleExplainRequest(for: index)
+                    onExplainSelection: { selectedText in
+                        handleExplainRequest(for: index, selectedText: selectedText)
                     },
                     onHighlightToggle: {
                         handleHighlightToggle(for: index)
@@ -238,21 +246,39 @@ struct NewsDetailView: View {
 
     // MARK: - Interaction Handlers
 
-    private func handleExplainRequest(for index: Int) {
+    private func handleExplainRequest(for index: Int, selectedText: String) {
         guard index < paragraphs.count else { return }
 
-        // Toggle explanation state
-        if paragraphs[index].isExplanationExpanded {
-            // Collapse
-            paragraphs[index].explanationState = .collapsed
-        } else {
-            // Start loading
-            paragraphs[index].explanationState = .loading
-
-            // Fetch explanation
-            Task {
-                await fetchParagraphExplanation(for: index)
+        // If selected text is empty, check if we should collapse
+        if selectedText.isEmpty {
+            if paragraphs[index].isExplanationExpanded {
+                // Collapse
+                paragraphs[index].explanationState = .collapsed
             }
+            return
+        }
+
+        // If already expanded and same text, collapse
+        if paragraphs[index].isExplanationExpanded {
+            paragraphs[index].explanationState = .collapsed
+            // Wait a bit then expand with new selection
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.startExplainRequest(for: index, selectedText: selectedText)
+            }
+        } else {
+            startExplainRequest(for: index, selectedText: selectedText)
+        }
+    }
+
+    private func startExplainRequest(for index: Int, selectedText: String) {
+        guard index < paragraphs.count else { return }
+
+        // Start loading
+        paragraphs[index].explanationState = .loading
+
+        // Fetch explanation
+        Task {
+            await fetchParagraphExplanation(for: index, selectedText: selectedText)
         }
     }
 
@@ -275,39 +301,57 @@ struct NewsDetailView: View {
         }
     }
 
-    private func fetchParagraphExplanation(for index: Int) async {
+    private func fetchParagraphExplanation(for index: Int, selectedText: String) async {
         guard index < paragraphs.count else { return }
 
-        let paragraph = paragraphs[index]
+        let currentParagraph = paragraphs[index]
 
-        // TODO: Integrate with SentenceExplanationService
-        // For now, simulate API call with mock data
-        try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+        // Build context with previous and next paragraphs
+        let previousParagraph = index > 0 ? paragraphs[index - 1] : nil
+        let nextParagraph = index < paragraphs.count - 1 ? paragraphs[index + 1] : nil
 
-        // Mock explanation data
-        let mockData = ParagraphExplanationData(
-            overview: "這段描述了達拉斯自由隊在 2026 年 WNBA 選秀樂透中獲得第一順位選秀權的消息。",
-            keyPoints: [
-                "達拉斯自由隊贏得選秀樂透",
-                "獲得 2026 年第一順位選秀權",
-                "這發生在週日"
-            ],
-            vocabulary: [
-                ParagraphVocabularyItem(
-                    word: "draft lottery",
-                    meaning: "選秀樂透 - 決定球隊選秀順序的抽籤活動",
-                    note: "用於職業運動聯盟中分配新秀選秀權"
-                ),
-                ParagraphVocabularyItem(
-                    word: "securing",
-                    meaning: "確保、獲得",
-                    note: "在此指確定獲得了某項權利"
-                )
-            ],
-            chineseSummary: "達拉斯自由隊在週日贏得了 2026 年 WNBA 選秀樂透，確保了明年選秀的第一順位選秀權。"
+        let context = SentenceContext(
+            index: index,
+            previous: previousParagraph?.asSubtitleItem,
+            current: currentParagraph.asSubtitleItem,
+            next: nextParagraph?.asSubtitleItem
         )
 
-        paragraphs[index].explanationState = .expanded(data: mockData)
+        do {
+            let result: SentenceExplanationResult
+
+            // If selected text is provided, explain the selection
+            // Otherwise explain the whole paragraph
+            if !selectedText.isEmpty {
+                result = try await explanationService.fetchPhraseExplanation(
+                    selectedText,
+                    context: context,
+                    language: "en"
+                )
+            } else {
+                result = try await explanationService.fetchSentenceExplanation(
+                    context: context,
+                    language: "en"
+                )
+            }
+
+            // Convert to paragraph explanation data
+            let explanationData = ParagraphExplanationData(
+                from: result.data,
+                cached: result.cached
+            )
+
+            // Update state on main thread
+            await MainActor.run {
+                paragraphs[index].explanationState = .expanded(data: explanationData)
+            }
+
+        } catch {
+            // Handle error
+            await MainActor.run {
+                paragraphs[index].explanationState = .error(message: error.localizedDescription)
+            }
+        }
     }
 
     // MARK: - Data Loading

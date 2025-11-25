@@ -124,6 +124,41 @@ extension NewsArticleParagraph {
     }
 }
 
+// MARK: - Sentence Service Adapter
+
+extension NewsArticleParagraph {
+    /// Convert paragraph to SubtitleItem for SentenceExplanationService
+    var asSubtitleItem: SubtitleItem {
+        SubtitleItem(
+            id: index,
+            startTime: 0,  // News paragraphs don't have timing
+            endTime: 0,
+            text: text
+        )
+    }
+}
+
+// MARK: - Explanation Data Adapter
+
+extension ParagraphExplanationData {
+    /// Create from SentenceExplanationViewData (from SentenceExplanationService)
+    init(from sentenceData: SentenceExplanationViewData, cached: Bool) {
+        self.init(
+            overview: sentenceData.overview,
+            keyPoints: sentenceData.keyPoints,
+            vocabulary: sentenceData.vocabulary.map { vocabItem in
+                ParagraphVocabularyItem(
+                    word: vocabItem.word,
+                    meaning: vocabItem.meaning,
+                    note: vocabItem.note
+                )
+            },
+            chineseSummary: sentenceData.chineseMeaning,
+            cached: cached
+        )
+    }
+}
+
 // MARK: - Saved Highlight Model
 
 /// Persistent storage for highlighted paragraphs and notes
