@@ -17,8 +17,8 @@ struct SelectableTextView: UIViewRepresentable {
     let isHighlighted: Bool
     let onExplainSelection: (String) -> Void
 
-    func makeUIView(context: Context) -> UITextView {
-        let textView = UITextView()
+    func makeUIView(context: Context) -> SelfSizingTextView {
+        let textView = SelfSizingTextView()
 
         // Configure text view
         textView.isEditable = false
@@ -28,6 +28,10 @@ struct SelectableTextView: UIViewRepresentable {
         textView.textContainerInset = .zero
         textView.textContainer.lineFragmentPadding = 0
         textView.delegate = context.coordinator
+
+        // Important: Set content compression resistance
+        textView.setContentCompressionResistancePriority(.required, for: .vertical)
+        textView.setContentHuggingPriority(.required, for: .vertical)
 
         // Configure text attributes
         let paragraphStyle = NSMutableParagraphStyle()
@@ -49,7 +53,7 @@ struct SelectableTextView: UIViewRepresentable {
         return textView
     }
 
-    func updateUIView(_ textView: UITextView, context: Context) {
+    func updateUIView(_ textView: SelfSizingTextView, context: Context) {
         // Update text attributes if needed
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.lineSpacing = lineSpacing
@@ -73,6 +77,9 @@ struct SelectableTextView: UIViewRepresentable {
             textView.backgroundColor = .clear
             textView.textContainerInset = .zero
         }
+
+        // Invalidate intrinsic content size after update
+        textView.invalidateIntrinsicContentSize()
     }
 
     func makeCoordinator() -> Coordinator {
@@ -160,6 +167,47 @@ extension SelectableTextView.Coordinator: UIEditMenuInteractionDelegate {
     }
 }
 
+// MARK: - Self-Sizing TextView
+
+/// UITextView subclass that properly reports its intrinsic content size
+class SelfSizingTextView: UITextView {
+    override var intrinsicContentSize: CGSize {
+        // Calculate the size needed to display all text
+        let size = sizeThatFits(CGSize(width: bounds.width, height: .greatestFiniteMagnitude))
+        return CGSize(width: UIView.noIntrinsicMetric, height: size.height)
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // Invalidate intrinsic content size when layout changes
+        invalidateIntrinsicContentSize()
+    }
+
+    override var text: String! {
+        didSet {
+            invalidateIntrinsicContentSize()
+        }
+    }
+
+    override var attributedText: NSAttributedString! {
+        didSet {
+            invalidateIntrinsicContentSize()
+        }
+    }
+
+    override var font: UIFont? {
+        didSet {
+            invalidateIntrinsicContentSize()
+        }
+    }
+
+    override var textContainerInset: UIEdgeInsets {
+        didSet {
+            invalidateIntrinsicContentSize()
+        }
+    }
+}
+
 // MARK: - Preview
 
 #Preview {
@@ -176,7 +224,6 @@ extension SelectableTextView.Coordinator: UIEditMenuInteractionDelegate {
                     print("Selected text: \(selectedText)")
                 }
             )
-            .frame(maxWidth: .infinity)
             .padding()
 
             SelectableTextView(
@@ -190,7 +237,6 @@ extension SelectableTextView.Coordinator: UIEditMenuInteractionDelegate {
                     print("Selected text: \(selectedText)")
                 }
             )
-            .frame(maxWidth: .infinity)
             .padding()
         }
     }

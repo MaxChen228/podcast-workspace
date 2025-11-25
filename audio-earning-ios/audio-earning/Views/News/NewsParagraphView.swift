@@ -65,7 +65,6 @@ struct NewsParagraphView: View {
                 onExplainSelection(selectedText)
             }
         )
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Action Buttons
