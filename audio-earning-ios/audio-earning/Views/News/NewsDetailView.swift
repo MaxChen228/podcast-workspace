@@ -113,11 +113,10 @@ struct NewsDetailView: View {
             // Article Body
             articleBody
         }
+        .frame(maxWidth: ArticleReaderStyle.maxReadingWidth)
         .padding(.horizontal, ArticleReaderStyle.horizontalPadding)
         .padding(.top, ArticleReaderStyle.topMargin)
         .padding(.bottom, ArticleReaderStyle.bottomMargin)
-        .frame(maxWidth: ArticleReaderStyle.maxReadingWidth)
-        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     // MARK: - Title Section
@@ -129,7 +128,6 @@ struct NewsDetailView: View {
             .tracking(ArticleReaderStyle.titleTracking)
             .multilineTextAlignment(.leading)
             .foregroundColor(.primary)
-            .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Metadata Section
@@ -219,17 +217,97 @@ struct NewsDetailView: View {
 
     private var paragraphsView: some View {
         VStack(alignment: .leading, spacing: ArticleReaderStyle.paragraphSpacing) {
-            ForEach(paragraphs) { paragraph in
-                Text(paragraph.text)
-                    .font(appearance.bodyFont.font(size: bodySize, weight: .regular))
-                    .lineSpacing(ArticleReaderStyle.bodyLineSpacing)
-                    .tracking(ArticleReaderStyle.bodyTracking)
-                    .multilineTextAlignment(.leading)
-                    .textSelection(.enabled)
-                    .foregroundColor(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
+            ForEach(paragraphs.indices, id: \.self) { index in
+                NewsParagraphView(
+                    paragraph: paragraphs[index],
+                    appearance: appearance,
+                    bodySize: bodySize,
+                    onExplainRequest: {
+                        handleExplainRequest(for: index)
+                    },
+                    onHighlightToggle: {
+                        handleHighlightToggle(for: index)
+                    },
+                    onNoteAdd: {
+                        handleNoteAdd(for: index)
+                    }
+                )
             }
         }
+    }
+
+    // MARK: - Interaction Handlers
+
+    private func handleExplainRequest(for index: Int) {
+        guard index < paragraphs.count else { return }
+
+        // Toggle explanation state
+        if paragraphs[index].isExplanationExpanded {
+            // Collapse
+            paragraphs[index].explanationState = .collapsed
+        } else {
+            // Start loading
+            paragraphs[index].explanationState = .loading
+
+            // Fetch explanation
+            Task {
+                await fetchParagraphExplanation(for: index)
+            }
+        }
+    }
+
+    private func handleHighlightToggle(for index: Int) {
+        guard index < paragraphs.count else { return }
+        paragraphs[index].isHighlighted.toggle()
+
+        // TODO: Persist highlight state to UserDefaults or CoreData
+    }
+
+    private func handleNoteAdd(for index: Int) {
+        guard index < paragraphs.count else { return }
+
+        // TODO: Show note editor sheet
+        // For now, just add a sample note
+        if paragraphs[index].hasNote {
+            paragraphs[index].note = nil
+        } else {
+            paragraphs[index].note = "添加筆記..."
+        }
+    }
+
+    private func fetchParagraphExplanation(for index: Int) async {
+        guard index < paragraphs.count else { return }
+
+        let paragraph = paragraphs[index]
+
+        // TODO: Integrate with SentenceExplanationService
+        // For now, simulate API call with mock data
+        try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+
+        // Mock explanation data
+        let mockData = ParagraphExplanationData(
+            overview: "這段描述了達拉斯自由隊在 2026 年 WNBA 選秀樂透中獲得第一順位選秀權的消息。",
+            keyPoints: [
+                "達拉斯自由隊贏得選秀樂透",
+                "獲得 2026 年第一順位選秀權",
+                "這發生在週日"
+            ],
+            vocabulary: [
+                ParagraphVocabularyItem(
+                    word: "draft lottery",
+                    meaning: "選秀樂透 - 決定球隊選秀順序的抽籤活動",
+                    note: "用於職業運動聯盟中分配新秀選秀權"
+                ),
+                ParagraphVocabularyItem(
+                    word: "securing",
+                    meaning: "確保、獲得",
+                    note: "在此指確定獲得了某項權利"
+                )
+            ],
+            chineseSummary: "達拉斯自由隊在週日贏得了 2026 年 WNBA 選秀樂透，確保了明年選秀的第一順位選秀權。"
+        )
+
+        paragraphs[index].explanationState = .expanded(data: mockData)
     }
 
     // MARK: - Data Loading

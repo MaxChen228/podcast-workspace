@@ -53,7 +53,7 @@ enum NewsReaderFontOption: String, CaseIterable, Identifiable, Codable {
             return .system(size: size, weight: weight, design: .default)
         case .spaceMono:
             let fontName = weight == .bold ? "SpaceMono-Bold" : "SpaceMono-Regular"
-            return .custom(fontName, size: size)
+            return .custom(fontName, size: size, relativeTo: .body)
         case .cormorantGaramond:
             let fontName: String
             switch weight {
@@ -64,10 +64,10 @@ enum NewsReaderFontOption: String, CaseIterable, Identifiable, Codable {
             default:
                 fontName = "CormorantGaramond-Regular"
             }
-            return .custom(fontName, size: size)
+            return .custom(fontName, size: size, relativeTo: .body)
         case .tangerine:
             let fontName = weight == .bold ? "Tangerine-Bold" : "Tangerine-Regular"
-            return .custom(fontName, size: size)
+            return .custom(fontName, size: size, relativeTo: .body)
         }
     }
 
