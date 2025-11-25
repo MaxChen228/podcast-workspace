@@ -43,8 +43,8 @@ struct SelectableTextView: UIViewRepresentable {
 
         textView.attributedText = NSAttributedString(string: text, attributes: attributes)
 
-        // Add custom menu item
-        setupCustomMenu(for: textView, coordinator: context.coordinator)
+        // Setup edit menu interaction for iOS 16+
+        context.coordinator.setupEditMenu(for: textView)
 
         return textView
     }
@@ -79,40 +79,32 @@ struct SelectableTextView: UIViewRepresentable {
         Coordinator(onExplainSelection: onExplainSelection)
     }
 
-    private func setupCustomMenu(for textView: UITextView, coordinator: Coordinator) {
-        // Store reference for coordinator to use
-        coordinator.textView = textView
-    }
-
     // MARK: - Coordinator
 
     class Coordinator: NSObject, UITextViewDelegate {
         let onExplainSelection: (String) -> Void
         weak var textView: UITextView?
+        private var editMenuInteraction: Any?  // UIEditMenuInteraction
 
         init(onExplainSelection: @escaping (String) -> Void) {
             self.onExplainSelection = onExplainSelection
             super.init()
         }
 
+        func setupEditMenu(for textView: UITextView) {
+            self.textView = textView
+
+            // Use UIEditMenuInteraction for iOS 16+
+            if #available(iOS 16.0, *) {
+                let interaction = UIEditMenuInteraction(delegate: self)
+                textView.addInteraction(interaction)
+                self.editMenuInteraction = interaction
+            }
+        }
+
         func textViewDidChangeSelection(_ textView: UITextView) {
-            // Only show custom menu when there's a selection
-            guard let selectedRange = textView.selectedTextRange,
-                  !selectedRange.isEmpty else {
-                return
-            }
-
-            // Add custom menu item for AI explanation
-            if UIMenuController.shared.menuItems?.contains(where: { $0.title == "AI 解釋" }) != true {
-                let explainItem = UIMenuItem(
-                    title: "AI 解釋",
-                    action: #selector(explainSelection)
-                )
-
-                var menuItems = UIMenuController.shared.menuItems ?? []
-                menuItems.insert(explainItem, at: 0)
-                UIMenuController.shared.menuItems = menuItems
-            }
+            // Store text view reference
+            self.textView = textView
         }
 
         @objc func explainSelection() {
@@ -128,18 +120,43 @@ struct SelectableTextView: UIViewRepresentable {
             onExplainSelection(trimmedText)
 
             // Clear selection after action
-            textView.selectedTextRange = nil
-        }
-
-        override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
-            // Enable our custom action when text is selected
-            if action == #selector(explainSelection) {
-                return textView?.selectedTextRange?.isEmpty == false
+            DispatchQueue.main.async {
+                textView.selectedTextRange = nil
             }
-
-            // Allow default actions (copy, etc.)
-            return super.canPerformAction(action, withSender: sender)
         }
+    }
+}
+
+// MARK: - iOS 16+ Edit Menu Support
+
+@available(iOS 16.0, *)
+extension SelectableTextView.Coordinator: UIEditMenuInteractionDelegate {
+    func editMenuInteraction(
+        _ interaction: UIEditMenuInteraction,
+        menuFor configuration: UIEditMenuConfiguration,
+        suggestedActions: [UIMenuElement]
+    ) -> UIMenu? {
+        // Only add AI explanation if there's a text selection
+        guard let textView = textView,
+              let selectedRange = textView.selectedTextRange,
+              !selectedRange.isEmpty else {
+            return nil
+        }
+
+        // Create AI explanation action
+        let explainAction = UIAction(
+            title: "AI 解釋",
+            image: UIImage(systemName: "sparkles")
+        ) { [weak self] _ in
+            self?.explainSelection()
+        }
+
+        // Combine with suggested actions
+        var actions = [UIMenuElement]()
+        actions.append(explainAction)
+        actions.append(contentsOf: suggestedActions)
+
+        return UIMenu(children: actions)
     }
 }
 
